@@ -6,7 +6,7 @@ You can try to run our cloud-hosted nanoHUB app for fun! \
 https://nanohub.org/tools/virion2pbpd
 
 ### Citation
-If you use the code in your work, please cite [Maraviroc inhibits SARS-CoV-2 multiplication and s-protein mediated cell fusion in cell culture](https://doi.org/10.1101/2020.08.12.246389).
+If you use the code in your work, please cite [Maraviroc inhibits SARS-CoV-2 multiplication and s-protein mediated cell fusion in cell culture](https://doi.org/10.1101/2020.08.12.246389) and [Rapid community-driven development of a SARS-CoV-2 tissue simulator](https://doi.org/10.1101/2020.04.02.019075).
 ```text
 @article {Risner2020.08.12.246389,
 	author = {Risner, Kenneth H. and Tieu, Katie V. and Wang, Yafei and Bakovic, Allison and Alem, Farhang and Bhalla, Nishank and Nathan, Steven and Conway, Daniel E. and Macklin, Paul and Narayanan, Aarthi},
@@ -14,6 +14,15 @@ If you use the code in your work, please cite [Maraviroc inhibits SARS-CoV-2 mul
 	elocation-id = {2020.08.12.246389},
 	year = {2020},
 	doi = {10.1101/2020.08.12.246389},
+	publisher = {Cold Spring Harbor Laboratory},
+	journal = {bioRxiv}}
+	
+@article {Wang2020.04.02.019075,
+	author = {Wang, Yafei and An, Gary and Becker, Andrew and Cockrell, Chase and Collier, Nicholson and Craig, Morgan and Davis, Courtney L. and Faeder, James and Versypt, Ashlee N. Ford and Gianlupi, Juliano F. and Glazier, James A. and Heiland, Randy and Hillen, Thomas and Islam, Mohammad Aminul and Jenner, Adrianne and Liu, Bing and Morel, Penelope A and Narayanan, Aarthi and Ozik, Jonathan and Rangamani, Padmini and Shoemaker, Jason Edward and Smith, Amber M. and Macklin, Paul},
+	title = {Rapid community-driven development of a SARS-CoV-2 tissue simulator},
+	elocation-id = {2020.04.02.019075},
+	year = {2020},
+	doi = {10.1101/2020.04.02.019075},
 	publisher = {Cold Spring Harbor Laboratory},
 	journal = {bioRxiv}}
 ```
