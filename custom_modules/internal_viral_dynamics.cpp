@@ -79,6 +79,14 @@ void internal_virus_model( Cell* pCell, Phenotype& phenotype, double dt )
 		
 	// actual model goes here 
 
+
+    // add negative feedback for replication
+    if( pCell->custom_data[nR] >= parameters.doubles("RNA_threshold") )
+    {
+    	pCell->custom_data["uncoated_to_RNA_rate"] = parameters.doubles("uncoated_to_RNA_rate_feedback");
+    }
+
+
 	// uncoat endocytosed virus
 	double dV = dt * pCell->custom_data["virion_uncoating_rate"] * pCell->custom_data[nV_internal] ;
 	if( dV > pCell->custom_data[nV_internal] )

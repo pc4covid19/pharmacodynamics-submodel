@@ -268,7 +268,7 @@ void setup_tissue( void )
 		std::cout << "Placing " << number_of_virions << " virions ... " << std::endl; 
 		for( int n=0 ; n < number_of_virions ; n++ )
 		{
-			// pick a random voxel 
+			/*// pick a random voxel 
 			std::vector<double> position = {0,0,0}; 
 			position[0] = x_min + (x_max-x_min)*UniformRandom(); 
 			position[1] = y_min + (y_max-y_min)*UniformRandom(); 
@@ -278,6 +278,15 @@ void setup_tissue( void )
 			// int n = (int) ( ( microenvironment.number_of_voxels()-1.0 ) * UniformRandom() ); 
 			// microenvironment(i,j)[nV] += single_virion_density_change; 
 			microenvironment(m)[nV] += single_virion_density_change; 
+			*/
+
+
+			// randomly pick up a cell and make one virion bounded with ACE2, 
+			// to match with Arthi's experimental data
+			int m = (int) ( (*all_cells).size()*UniformRandom() ); 
+			pC = (*all_cells)[m];
+			pC->custom_data["bound_external_ACE2"] += 1; 
+
 		}
 	}
 	
