@@ -59,6 +59,9 @@ void receptor_dynamics_model( Cell* pCell, Phenotype& phenotype, double dt )
 	static int nR_release = pCell->custom_data.find_variable_index( "ACE2_cargo_release_rate" ); 	
 	static int nR_recycle = pCell->custom_data.find_variable_index( "ACE2_recycling_rate" ); 
 
+	static int RNA_index =  pCell->custom_data.find_variable_index( "viral_RNA" ); 
+	static bool endo_export_enabled = parameters.bools( "drug_endo_export" );  
+
 /*	
 	static bool done = false;
 	extern Cell* pInfected; 
@@ -118,6 +121,18 @@ std::cout << "receptor : " << __LINE__ << " "
 	// remove newly bound receptor from R_EU 
 
 	pCell->custom_data[nR_EU] -= newly_bound; 
+
+
+    // add negative feedback for ACE2 and endo
+    if( pCell->custom_data[RNA_index] >= parameters.doubles("RNA_threshold") )
+    {
+    	pCell->custom_data[nR_bind] = parameters.doubles("ACE2_binding_rate_feedback");
+    	if ( not endo_export_enabled )
+    	{
+    		pCell->custom_data[nR_endo] = parameters.doubles("ACE2_endocytosis_rate_feedback");
+    	}
+    	
+    }
 	
 	// endocytosis 
 	

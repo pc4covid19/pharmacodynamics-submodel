@@ -18,9 +18,6 @@ void epithelium_phenotype( Cell* pCell, Phenotype& phenotype, double dt )
 {
 	// immune stuff, not need for PBPD model
 	// static int debris_index = microenvironment.find_density_index( "debris");
-
-    // PBPD submodel
-	pharmacodynamics_submodel_info.phenotype_function(pCell,phenotype,dt); 
 	
 	// receptor dynamics 
 	// requires faster time scale - done in main function 
@@ -32,6 +29,9 @@ void epithelium_phenotype( Cell* pCell, Phenotype& phenotype, double dt )
 	// viral response model 
 	internal_virus_response_model_info.phenotype_function(pCell,phenotype,dt); 
 	// internal_virus_response_model(pCell,phenotype,dt);	
+
+	// PBPD submodel
+	pharmacodynamics_submodel_info.phenotype_function(pCell,phenotype,dt); 
 	
 
  /*  // immune stuff, not need for PBPD model

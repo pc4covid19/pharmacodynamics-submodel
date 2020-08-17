@@ -2,7 +2,7 @@
 
 using namespace PhysiCell; 
 
-std::string pharmacodynamics_submodel_version = "0.1.0"; 
+std::string pharmacodynamics_submodel_version = "0.2.0"; 
 
 Submodel_Information pharmacodynamics_submodel_info; 
 
@@ -141,21 +141,27 @@ void pharmacodynamics_response( Cell* pCell, Phenotype& phenotype, double dt )
 	static bool endo_export_enabled = parameters.bools( "drug_endo_export" );  
 	static int drug_effect_intra = pCell->custom_data.find_variable_index("Intracellular_drug_effect"); 
 	static bool binding_replication_enabled = parameters.bools( "drug_binding_replication" );  
+
+	static int RNA_index =  pCell->custom_data.find_variable_index( "viral_RNA" ); 
 	
     // uptake new production rate based on drug effect 
 	if ( endo_export_enabled )
 	{
-      
-        pCell->custom_data[ "ACE2_endocytosis_rate" ] = interpolate( 
+		if( pCell->custom_data[RNA_index] >= parameters.doubles("RNA_threshold") )
+		{
+            pCell->custom_data[ "ACE2_endocytosis_rate" ] = interpolate( 
+        	   parameters.doubles("ACE2_endocytosis_rate_feedback"),  
+               parameters.doubles("drug_ACE2_endocytosis_rate"), 
+               pCell->custom_data[ drug_effect_intra]); 
+		}
+	    else 
+	    {
+	    	pCell->custom_data[ "ACE2_endocytosis_rate" ] = interpolate( 
         	   parameters.doubles("ACE2_endocytosis_rate_original"),  
                parameters.doubles("drug_ACE2_endocytosis_rate"), 
-               pCell->custom_data[ drug_effect_extra]); 
+               pCell->custom_data[ drug_effect_intra]); 
+	    }
 
-        pCell->custom_data[ "virion_uncoating_rate"] = interpolate( 
-               parameters.doubles("virion_uncoating_rate_original"),  
-               parameters.doubles("drug_virion_uncoated"), 
-               pCell->custom_data[ drug_effect_intra]);   
- 
 
 		pCell->custom_data[ "virion_export_rate"] = interpolate( 
                parameters.doubles("virion_export_rate_original"),  
@@ -166,10 +172,26 @@ void pharmacodynamics_response( Cell* pCell, Phenotype& phenotype, double dt )
     // uptake new production rate based on drug effect 
 	if ( binding_replication_enabled )
 	{
-        pCell->custom_data[ "ACE2_binding_rate" ] = interpolate( 
+		if( pCell->custom_data[RNA_index] >= parameters.doubles("RNA_threshold") )
+		{
+            pCell->custom_data[ "ACE2_binding_rate" ] = interpolate( 
+        	   parameters.doubles("ACE2_binding_rate_feedback"),  
+               parameters.doubles("drug_ACE2_binding_rate"), 
+               pCell->custom_data[ drug_effect_intra]); 
+		}
+		else
+		{
+			pCell->custom_data[ "ACE2_binding_rate" ] = interpolate( 
         	   parameters.doubles("ACE2_binding_rate_original"),  
                parameters.doubles("drug_ACE2_binding_rate"), 
-               pCell->custom_data[ drug_effect_extra]); 
+               pCell->custom_data[ drug_effect_intra]); 
+		}
+ 
+
+        pCell->custom_data[ "virion_uncoating_rate"] = interpolate( 
+               parameters.doubles("virion_uncoating_rate_original"),  
+               parameters.doubles("drug_virion_uncoated"), 
+               pCell->custom_data[ drug_effect_intra]);   
 
 
         pCell->custom_data[ "uncoated_to_RNA_rate" ] = interpolate( 
@@ -232,7 +254,10 @@ void apply_therapies( void )
 			{
 				// if( microenvironment.mesh.voxels[i].is_Dirichlet == true )
 				// { microenvironment.update_dirichlet_node( i, index, dose ); }
-				microenvironment(i)[index] += doses;
+				// microenvironment(i)[index] += doses;
+				microenvironment.set_substrate_dirichlet_activation(index, i, true); 
+				microenvironment.update_dirichlet_node( i, index, doses ); 
+
 			}	
 		
 			dose_update++;
