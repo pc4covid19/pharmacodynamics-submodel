@@ -17,13 +17,12 @@ If you use the code in your work, please cite [Maraviroc inhibits SARS-CoV-2 mul
 	publisher = {Cold Spring Harbor Laboratory},
 	journal = {bioRxiv}}
 	
-@article {Wang2020.04.02.019075,
-	author = {Wang, Yafei and An, Gary and Becker, Andrew and Cockrell, Chase and Collier, Nicholson and Craig, Morgan and Davis, Courtney L. and Faeder, James and Versypt, Ashlee N. Ford and Gianlupi, Juliano F. and Glazier, James A. and Heiland, Randy and Hillen, Thomas and Islam, Mohammad Aminul and Jenner, Adrianne and Liu, Bing and Morel, Penelope A and Narayanan, Aarthi and Ozik, Jonathan and Rangamani, Padmini and Shoemaker, Jason Edward and Smith, Amber M. and Macklin, Paul},
+@article {Getz2020.04.02.019075,
+	author = {Getz, Michael and Wang, Yafei and An, Gary and Becker, Andrew and Cockrell, Chase and Collier, Nicholson and Craig, Morgan and Davis, Courtney L. and Faeder, James and Versypt, Ashlee N. Ford and Gianlupi, Juliano F. and Glazier, James A. and Hamis, Sara and Heiland, Randy and Hillen, Thomas and Hou, Dennis and Islam, Mohammad Aminul and Jenner, Adrianne and Kurtoglu, Furkan and Liu, Bing and Macfarlane, Fiona and Maygrundter, Pablo and Morel, Penelope A and Narayanan, Aarthi and Ozik, Jonathan and Pienaar, Elsje and Rangamani, Padmini and Shoemaker, Jason Edward and Smith, Amber M. and Macklin, Paul},
 	title = {Rapid community-driven development of a SARS-CoV-2 tissue simulator},
 	elocation-id = {2020.04.02.019075},
 	year = {2020},
 	doi = {10.1101/2020.04.02.019075},
-	publisher = {Cold Spring Harbor Laboratory},
 	journal = {bioRxiv}}
 ```
 
