@@ -72,12 +72,17 @@
 #include "./internal_viral_dynamics.h"
 #include "./internal_viral_response.h" 
 #include "./receptor_dynamics.h" 
-#include "./immune_submodels.h" 
-#include "./pharmacodynamics_submodel.h" 
-#include "./epithelium_submodel.h" 
 
 using namespace BioFVM; 
 using namespace PhysiCell;
+
+void tumor_cell_phenotype_with_oncoprotein( Cell* pCell, Phenotype& phenotype, double dt ); 
+
+// any additional cell types (beyond cell_defaults)
+
+extern Cell_Definition lung_epithelium; 
+
+// custom cell phenotype functions could go here 
 
 // setup functions to help us along 
 
@@ -89,17 +94,19 @@ void setup_microenvironment( void );
 
 // custom pathology coloring function 
 
-std::string blue_yellow_interpolation( double min, double val, double max );
-std::vector<std::string> epithelium_coloring_function( Cell* );
-std::vector<std::string> tissue_coloring_function( Cell* );
+std::vector<std::string> my_coloring_function( Cell* );
 
-// color cell fusion, YW 2022
-std::string cell_fusion_color(double val);
-
-// eventually move this to a tissue submodel 
+void viral_dynamics( Cell* pCell, Phenotype& phenotype, double dt ); 
 
 void move_exported_to_viral_field( void ); 
 
-void SVG_plot_virus( std::string filename , Microenvironment& M, double z_slice , double time, std::vector<std::string> (*cell_coloring_function)(Cell*) );
+// drug effect !!!!!!!!
+double Hill_function( double input, double Hill_power , double EC_50 );
+void advance_internalization( Cell* pCell, Phenotype& phenotype , double dt );
+void simple_effect_model( Cell* pCell, Phenotype& phenotype, double dt );
+
+void apply_therapies( void );  
+
+
 
 

@@ -140,7 +140,7 @@ void pharmacodynamics_response( Cell* pCell, Phenotype& phenotype, double dt )
 	static int drug_effect_extra = pCell->custom_data.find_variable_index("Extracellular_drug_effect"); 
 	static bool endo_export_enabled = parameters.bools( "drug_endo_export" );  
 	static int drug_effect_intra = pCell->custom_data.find_variable_index("Intracellular_drug_effect"); 
-	static bool replication_enabled = parameters.bools( "drug_replication" );  
+	static bool binding_replication_enabled = parameters.bools( "drug_binding_replication" );  
 
 	static int RNA_index =  pCell->custom_data.find_variable_index( "viral_RNA" ); 
 	
@@ -168,12 +168,11 @@ void pharmacodynamics_response( Cell* pCell, Phenotype& phenotype, double dt )
                pCell->custom_data[ drug_effect_intra]);   
     }
 
-    // uptake new production rate based on drug effect
-	if ( replication_enabled )
+    // uptake new production rate based on drug effect 
+	if ( binding_replication_enabled )
 	{
 
 	// Maraviroc doesn't impact viral binding process accoding to Aarith experiental results
-	// Let's only focus on uncoating RNA and protein synthesis rate 
 	/*	
 		if( pCell->custom_data[RNA_index] >= parameters.doubles("RNA_threshold") )
 		{
@@ -192,39 +191,26 @@ void pharmacodynamics_response( Cell* pCell, Phenotype& phenotype, double dt )
 		}
  	*/
 
-	/*
         pCell->custom_data[ "virion_uncoating_rate"] = interpolate( 
                parameters.doubles("virion_uncoating_rate_original"),  
                parameters.doubles("drug_virion_uncoated"), 
                pCell->custom_data[ drug_effect_intra]);   
-	*/
 
-	if( pCell->custom_data[RNA_index] >= parameters.doubles("RNA_threshold") )
-	{
-		pCell->custom_data[ "uncoated_to_RNA_rate" ] = interpolate( 
-        		parameters.doubles("uncoated_to_RNA_rate_feedback"),  
-               	parameters.doubles("drug_uncoated_to_RNA_rate"), 
-               	pCell->custom_data[ drug_effect_intra]);
-	}
-	else
-	{
-		pCell->custom_data[ "uncoated_to_RNA_rate" ] = interpolate( 
-        	   	parameters.doubles("uncoated_to_RNA_rate_original"),  
-                 	parameters.doubles("drug_uncoated_to_RNA_rate"), 
-                 	pCell->custom_data[ drug_effect_intra]);
-	}
+
+        pCell->custom_data[ "uncoated_to_RNA_rate" ] = interpolate( 
+        	   parameters.doubles("uncoated_to_RNA_rate_original"),  
+               parameters.doubles("drug_uncoated_to_RNA_rate"), 
+               pCell->custom_data[ drug_effect_intra]); 
 
         pCell->custom_data[ "protein_synthesis_rate" ] = interpolate( 
         	   parameters.doubles("protein_synthesis_rate_original"),  
                parameters.doubles("drug_protein_synthesis_rate"), 
                pCell->custom_data[ drug_effect_intra]); 
 
-        /*
         pCell->custom_data[ "virion_assembly_rate" ] = interpolate( 
         	   parameters.doubles("virion_assembly_rate_original"),  
                parameters.doubles("drug_virion_assembly_rate"), 
-               pCell->custom_data[ drug_effect_intra]);  
-        */ 
+               pCell->custom_data[ drug_effect_intra]);   
     }  
 }
 

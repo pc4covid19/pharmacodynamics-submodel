@@ -67,7 +67,9 @@ void internal_virus_response_model( Cell* pCell, Phenotype& phenotype, double dt
 	
 	double effect = v / (1.0+v); 
 	additional_death_rate *= effect; 
+	
 	phenotype.death.rates[apoptosis_model_index] = base_death_rate + additional_death_rate; 
+	// phenotype.death.rates[apoptosis_model_index] = 0;  // YW 2022 
 	
 
 

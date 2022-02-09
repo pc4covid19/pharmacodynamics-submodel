@@ -116,9 +116,15 @@ void create_cell_types( void )
 	pCD->phenotype.molecular.fraction_released_at_death[drug_index] = 
 		parameters.doubles("virus_fraction_released_at_death"); 
 
+	// set 100% virions absorbed when phagocytosing a cell, YW 2022
+	pCD->phenotype.molecular.fraction_transferred_when_ingested[ virion_index ] = 
+		parameters.doubles("fraction_transferred_when_ingested"); 
+	pCD->phenotype.molecular.fraction_transferred_when_ingested[ assembled_virion_index ] = 
+		parameters.doubles("fraction_transferred_when_ingested"); 
+
     
-    // PBPD submodel
-    pharmacodynamics_submodel_setup(); 
+   // PBPD submodel
+   pharmacodynamics_submodel_setup(); 
 
     
     // immune stuff, not need for PBPD model
@@ -373,9 +379,39 @@ std::string blue_yellow_interpolation( double min, double val, double max )
 	return color;  
 }
 
+// color cell fusion, YW 2022
+std::string cell_fusion_color(double val)
+{
+	std::string color;
+
+	if ( val >=1 && val <= 2)
+	{
+		color = "rgb(255,0,255)";
+	}
+	if (val >2 && val <= 4)
+	{
+		color = "rgb(0,255,128)";
+	}
+	if (val >4 && val <= 6)
+	{
+		color = "rgb(255,0,0)";
+	}
+	if (val >6 && val <= 8)
+	{
+		color = "rgb(255,153,51)";
+	}
+	if (val >8)
+	{
+		color = "rgb(153,0,0)";
+	}
+
+	return color;  
+}
+
 std::vector<std::string> tissue_coloring_function( Cell* pCell )
 {
 	static int lung_epithelial_type = get_cell_definition( "lung epithelium" ).type; 
+	static int n_fusion = pCell->custom_data.find_variable_index("cell_fusion_number"); 
 	
 	// static int CD8_Tcell_type = get_cell_definition( "CD8 Tcell" ).type; 
 	// static int Macrophage_type = get_cell_definition( "macrophage" ).type; 
@@ -404,11 +440,23 @@ std::vector<std::string> tissue_coloring_function( Cell* pCell )
 		return output; 
 	}
 
-	if( pCell->phenotype.death.dead == false && pCell->type == lung_epithelial_type )
+	// cell fusion color, YW 2022
+	if( pCell->phenotype.death.dead == false && pCell->type == lung_epithelial_type)
 	{
-		// color by virion 
-		output = epithelium_coloring_function(pCell); 
-		return output; 
+		if( pCell->custom_data["cell_fusion_number"] ==0 )
+		{
+			// color by virion 
+			output = epithelium_coloring_function(pCell); 
+			return output; 
+		}
+		else
+		{
+			// output[0] = "deeppink";	
+			output[0] = cell_fusion_color( pCell->custom_data[n_fusion] ); 
+			output[2] = output[0];
+			output[3] = output[0];
+			return output;
+		}
 	}
 	
 
