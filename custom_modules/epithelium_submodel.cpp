@@ -32,6 +32,9 @@ void epithelium_phenotype( Cell* pCell, Phenotype& phenotype, double dt )
 
 	// PBPD submodel
 	pharmacodynamics_submodel_info.phenotype_function(pCell,phenotype,dt); 
+
+	// cell fusion model
+	epithelium_fusion(pCell,phenotype,dt); 
 	
 
  /*  // immune stuff, not need for PBPD model
@@ -124,6 +127,123 @@ void epithelium_mechanics( Cell* pCell, Phenotype& phenotype, double dt )
 	*/
 	return; 
 }
+
+
+// simulate cell fusion, YW 2022 !!!
+void epithelium_fusion( Cell* pCell, Phenotype& phenotype, double dt )
+{
+	static int nA_external = microenvironment.find_density_index( "assembled virion" ); 
+	static int drug_effect_intra = pCell->custom_data.find_variable_index("Intracellular_drug_effect"); 
+	static int time_ingest_index = pCell->custom_data.find_variable_index("time_to_next_phagocytosis"); 
+	static int ingest_rate_index = pCell->custom_data.find_variable_index("phagocytosis_rate"); 
+	static int n_fusion = pCell->custom_data.find_variable_index("cell_fusion_number"); 
+
+	static int nR_EU = pCell->custom_data.find_variable_index( "unbound_external_ACE2" ); 
+	static int nR_EB = pCell->custom_data.find_variable_index( "bound_external_ACE2" ); 
+	static int nR_IU = pCell->custom_data.find_variable_index( "unbound_internal_ACE2" ); 
+	static int nR_IB = pCell->custom_data.find_variable_index( "bound_internal_ACE2" ); 
+
+	static int nV_internal = pCell->custom_data.find_variable_index( "virion" ); 
+	static int nA_internal = pCell->custom_data.find_variable_index( "assembled_virion" ); 
+	static int nUV = pCell->custom_data.find_variable_index( "uncoated_virion" ); 
+	static int nR  = pCell->custom_data.find_variable_index( "viral_RNA" ); 
+	static int nP  = pCell->custom_data.find_variable_index( "viral_protein" ); 
+
+	static bool drug_cell_fusion_enabled = parameters.bools( "drug_cell_fusion" );  
+
+	// follow COVID19 model: (Adrianne) check if still phagocytosing something, added if statement to say that if cell is still 
+	// internalising current material not to phagocytose anything else
+
+	if( pCell->custom_data[ time_ingest_index ] > PhysiCell_globals.current_time )
+	{ return; }	
+
+	// https://github.com/MathCancer/PhysiCell/blob/81e85ce1dcb7156864a4460666e60878b82d3e97/sample_projects/virus_macrophage/custom_modules/custom.cpp
+
+	Cell* pTestCell = NULL; 
+	std::vector<Cell*> neighbors = pCell->cells_in_my_container(); 
+	
+	for( int n=0; n < neighbors.size() ; n++ )
+	{
+		pTestCell = neighbors[n]; 
+		// if it is not me and not a macrophage 
+		if( pTestCell != pCell && pTestCell->phenotype.death.dead == false )
+		{
+			// calculate distance to the cell 
+			std::vector<double> displacement = pTestCell->position;
+			displacement -= pCell->position;
+			double distance = norm( displacement ); 
+			
+			double max_distance = pCell->phenotype.geometry.radius + pTestCell->phenotype.geometry.radius; 
+			max_distance *= 1.5;  // 1.1
+
+			// caculate the mean location
+			std::vector<double> mean_position = 0.5*(pTestCell->position + pCell->position);
+
+			// assume fusion probabbility is positive related with intra-viral load
+			double assembled_virion_pop = pTestCell->phenotype.molecular.internalized_total_substrates[nA_external]; 
+			double prob_cell_fusion = Hill_function(assembled_virion_pop, 1, parameters.doubles("half_max_cell_fusion"))
+					*pCell->custom_data[ ingest_rate_index ]*dt;  
+
+			// caculate the probability of ingest based on drug effect (the larger it is, the smaller probability of cell fusion)
+			// nonliear interplotation, assume r_min = 0
+			// prob = (1-E)^n*r_0 *dt + E^n*r_min *dt = (1-E)^n*r_0 *dt 
+			double temp = 1 - pCell->custom_data[drug_effect_intra];
+			if( drug_cell_fusion_enabled )
+			{
+				prob_cell_fusion *= std::pow(temp, parameters.doubles("drug_fusion_power"));  // 3, 5
+			}
+			
+			// test for viral load, distance, probability and cell fusion times
+			if( assembled_virion_pop > 10 && distance < max_distance && 
+				   UniformRandom() < prob_cell_fusion &&  pCell->custom_data[ n_fusion ] < 16 )
+			{
+				// std::cout << "\t\tnom nom nom" << std::endl; 
+
+				// what does the ingest_cell mean in core function 
+				// https://github.com/MathCancer/PhysiCell/blob/d45d290dd6e956bcc4c6899ff193748aad54bab4/core/PhysiCell_cell.cpp#L1163
+
+				pCell->ingest_cell( pTestCell );
+
+				pCell->position = mean_position;      // update the new position as of average 
+				pCell->update_voxel_in_container();   // update in the data structure 
+
+				// cell fusion number adding one and TestCell, as TestCell may have already fused !!!!!!!
+				pCell->custom_data[ n_fusion ] += ( 1+ pTestCell->custom_data[n_fusion] ); 
+
+				// update ACE2 stuff
+				pCell->custom_data[ nR_EU ] += pTestCell->custom_data[ nR_EU ]; 
+				pCell->custom_data[ nR_EB ] += pTestCell->custom_data[ nR_EB ]; 
+				pCell->custom_data[ nR_IU] += pTestCell->custom_data[ nR_IU ]; 
+				pCell->custom_data[ nR_IB ] += pTestCell->custom_data[ nR_IB ]; 
+
+				// update intracellular viral stuff
+				pCell->custom_data[ nV_internal ] += pTestCell->custom_data[ nV_internal ]; 
+				pCell->custom_data[ nA_internal ] += pTestCell->custom_data[ nA_internal ]; 
+				pCell->custom_data[ nUV ] += pTestCell->custom_data[ nUV ]; 
+				pCell->custom_data[ nR ] += pTestCell->custom_data[ nR ]; 
+				pCell->custom_data[ nP ] += pTestCell->custom_data[ nP ]; 
+
+				// if cell fusion, virion replicate faster
+				// pCell->custom_data["uncoated_to_RNA_rate"] += parameters.doubles("uncoated_to_RNA_rate_original");
+				// pCell->custom_data["protein_synthesis_rate"] += parameters.doubles("protein_synthesis_rate_original");
+				pCell->custom_data["uncoated_to_RNA_rate"] += pTestCell->custom_data["uncoated_to_RNA_rate"]; 
+				pCell->custom_data["protein_synthesis_rate"] += pTestCell->custom_data["protein_synthesis_rate"]; 
+
+				// if cell fusion, cell can tolerate more virus
+				// pCell->custom_data["max_apoptosis_half_max"] += parameters.doubles("max_apoptosis_half_max_orginal"); 
+				pCell->custom_data["max_apoptosis_half_max"] += pTestCell->custom_data["max_apoptosis_half_max"];
+
+				double time_to_ingest = pTestCell->phenotype.volume.total / pCell->custom_data["material_internalisation_rate"];
+				pCell->custom_data[ time_ingest_index ] = PhysiCell_globals.current_time + time_to_ingest;	
+				
+			}
+		}
+	}
+
+	return; 
+}
+
+
 
 void epithelium_submodel_setup( void )
 {
