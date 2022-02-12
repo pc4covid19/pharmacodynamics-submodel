@@ -74,10 +74,10 @@
 
 <PhysiCell_settings version="devel-version">
 	<domain>
-		<x_min>-1300</x_min> <!-- 1300 -->
-		<x_max>1300</x_max>
-		<y_min>-1300</y_min>
-		<y_max>1300</y_max>
+		<x_min>-400</x_min> <!-- 1300 -->
+		<x_max>400</x_max>
+		<y_min>-400</y_min>
+		<y_max>400</y_max>
 		<z_min>-10</z_min>
 		<z_max>10</z_max>
 		<dx>20</dx>
@@ -97,7 +97,7 @@
 	</overall>
 	
 	<parallel>
-		<omp_num_threads>24</omp_num_threads> <!-- 32 -->
+		<omp_num_threads>12</omp_num_threads> <!-- 32 -->
 	</parallel> 
 
 	<options>
@@ -113,7 +113,7 @@
 		</full_data>
 		
 		<SVG>
-			<interval units="min">60</interval>
+			<interval units="min">15</interval>
 			<enable>true</enable>
 		</SVG>
 		
@@ -347,7 +347,7 @@
 					description="fraction of virions absorbed when phagocytosing a cell">1.0</fraction_transferred_when_ingested>
 				<cell_fusion_number type="int" units="none" description="how many times of cell fusion">0</cell_fusion_number>
 				<!-- 0.167 --> 
-				<phagocytosis_rate units="1/min" type="double" desription="rate of phagocytosing a nearby target">0.167</phagocytosis_rate>
+				<phagocytosis_rate units="1/min" type="double" desription="rate of phagocytosing a nearby target">0.0000167</phagocytosis_rate> <!-- 0.167 -->
 				<time_to_next_phagocytosis units="min" type="double"    
 					description="time it takes for the neighbor cell to be phagocytosed">0</time_to_next_phagocytosis> 
 				<material_internalisation_rate units="micron^3/min" type="double" 

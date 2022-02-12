@@ -10,7 +10,11 @@ CC := g++
 ifdef PHYSICELL_CPP 
 	CC := $(PHYSICELL_CPP)
 endif
+<<<<<<< Updated upstream
 CC := g++-11 
+=======
+# CC := g++-11 
+>>>>>>> Stashed changes
 
 ARCH := native # best auto-tuning 
 # ARCH := core2 # a reasonably safe default for most CPUs since 2007
@@ -182,10 +186,15 @@ reset:
 	
 FOLDER := output
 FRAMERATE := 24
+MOVIENAME := out.mp4
+
+jpeg: 
+	magick mogrify -format jpg $(FOLDER)/snapshot*.svg 
+
 movie:
 #	mencoder "mf://snapshot*.jpg" -ovc lavc -lavcopts vcodec=mpeg4:vbitrate=10000:mbd=2:trell -mf fps=$(FRAMERATE):type=jpg -nosound -o out.avi	
 #	ffmpeg -i out.avi out.mp4 
-	ffmpeg -r $(FRAMERATE) -f image2 -i snapshot%08d.jpg -vcodec libx264 -pix_fmt yuv420p -strict -2 -tune animation -crf 15 -acodec aac out.mp4
+	ffmpeg -r $(FRAMERATE) -f image2 -i $(FOLDER)/snapshot%08d.jpg -vcodec libx264 -pix_fmt yuv420p -strict -2 -tune animation -crf 15 -acodec aac $(MOVIENAME)
 	#del snap*.jpg
 # archival 
 	

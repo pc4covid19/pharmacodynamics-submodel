@@ -174,7 +174,7 @@ void epithelium_fusion( Cell* pCell, Phenotype& phenotype, double dt )
 			double distance = norm( displacement ); 
 			
 			double max_distance = pCell->phenotype.geometry.radius + pTestCell->phenotype.geometry.radius; 
-			max_distance *= 1.5;  // 1.1
+			max_distance *= 1.1;  // 1.1, 1.5
 
 			// caculate the mean location
 			std::vector<double> mean_position = 0.5*(pTestCell->position + pCell->position);
@@ -199,16 +199,9 @@ void epithelium_fusion( Cell* pCell, Phenotype& phenotype, double dt )
 			{
 				// std::cout << "\t\tnom nom nom" << std::endl; 
 
-				// what does the ingest_cell mean in core function 
-				// https://github.com/MathCancer/PhysiCell/blob/d45d290dd6e956bcc4c6899ff193748aad54bab4/core/PhysiCell_cell.cpp#L1163
-
-				pCell->ingest_cell( pTestCell );
-
-				pCell->position = mean_position;      // update the new position as of average 
-				pCell->update_voxel_in_container();   // update in the data structure 
-
 				// cell fusion number adding one and TestCell, as TestCell may have already fused !!!!!!!
-				pCell->custom_data[ n_fusion ] += ( 1+ pTestCell->custom_data[n_fusion] ); 
+				// pCell->custom_data[ n_fusion ] += ( 1+ pTestCell->custom_data[n_fusion] ); 
+				pCell->custom_data[ n_fusion ] = pCell->state.number_of_nuclei + pTestCell->state.number_of_nuclei; 
 
 				// update ACE2 stuff
 				pCell->custom_data[ nR_EU ] += pTestCell->custom_data[ nR_EU ]; 
@@ -235,7 +228,19 @@ void epithelium_fusion( Cell* pCell, Phenotype& phenotype, double dt )
 
 				double time_to_ingest = pTestCell->phenotype.volume.total / pCell->custom_data["material_internalisation_rate"];
 				pCell->custom_data[ time_ingest_index ] = PhysiCell_globals.current_time + time_to_ingest;	
-				
+
+
+				// what does the ingest_cell mean in core function 
+				// https://github.com/MathCancer/PhysiCell/blob/d45d290dd6e956bcc4c6899ff193748aad54bab4/core/PhysiCell_cell.cpp#L1163
+
+				// pCell->ingest_cell( pTestCell );
+				pCell->fuse_cell( pTestCell );
+
+		
+				// pCell->position = mean_position;      // update the new position as of average 
+				pCell->update_voxel_in_container();   // update in the data structure 
+
+
 			}
 		}
 	}

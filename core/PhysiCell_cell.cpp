@@ -1247,8 +1247,30 @@ void Cell::fuse_cell( Cell* pCell_to_fuse )
 
 		axpy( &new_position , pCell_to_fuse->phenotype.volume.total , pCell_to_fuse->position ); // vol_B*x_B + vol_S*x_S
 		new_position /= total_volume; // (vol_B*x_B+vol_S*x_S)/(vol_B+vol_S);
+<<<<<<< Updated upstream
 		
 		this->assign_position( new_position ); 
+=======
+
+		static double xL = get_default_microenvironment()->mesh.bounding_box[0];		 
+		static double xU = get_default_microenvironment()->mesh.bounding_box[3]; 
+
+		static double yL = get_default_microenvironment()->mesh.bounding_box[1];		 
+		static double yU = get_default_microenvironment()->mesh.bounding_box[4]; 
+
+		static double zL = get_default_microenvironment()->mesh.bounding_box[2];		 
+		static double zU = get_default_microenvironment()->mesh.bounding_box[5]; 
+
+		if( new_position[0] < xL || new_position[0] > xU || 
+		    new_position[1] < yL || new_position[1] > yU || 
+			new_position[2] < zL || new_position[2] > zU )
+		{
+			std::cout << "cell fusion at " << new_position << " violates domain bounds" << std::endl; 
+			std::cout << get_default_microenvironment()->mesh.bounding_box << std::endl << std::endl; 
+		}
+		position = new_position; 
+		update_voxel_in_container();
+>>>>>>> Stashed changes
 
 		// set number of nuclei 
 
@@ -1269,7 +1291,11 @@ void Cell::fuse_cell( Cell* pCell_to_fuse )
 		
 		phenotype.volume.nuclear_solid += pCell_to_fuse->phenotype.volume.nuclear_solid; 
 		pCell_to_fuse->phenotype.volume.nuclear_solid = 0.0; 
+<<<<<<< Updated upstream
 		
+=======
+
+>>>>>>> Stashed changes
 		// consistency calculations 
 		
 		phenotype.volume.fluid = phenotype.volume.nuclear_fluid + 
@@ -1302,7 +1328,11 @@ void Cell::fuse_cell( Cell* pCell_to_fuse )
 		// update corresponding BioFVM parameters (self-consistency) 
 		set_total_volume( phenotype.volume.total ); 
 		pCell_to_fuse->set_total_volume( 0.0 ); 
+<<<<<<< Updated upstream
 		
+=======
+
+>>>>>>> Stashed changes
 		// absorb the internalized substrates 
 		
 		*internalized_substrates += *(pCell_to_fuse->internalized_substrates); 
@@ -1337,12 +1367,20 @@ void Cell::fuse_cell( Cell* pCell_to_fuse )
 		// set cell as unmovable and non-secreting 
 		pCell_to_fuse->is_movable = false; 
 		pCell_to_fuse->is_active = false; 
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 	}
 
 	// things that have their own thread safety 
 	pCell_to_fuse->flag_for_removal();
 	pCell_to_fuse->remove_all_attached_cells();
+<<<<<<< Updated upstream
 	
+=======
+
+>>>>>>> Stashed changes
 	return; 
 }
 
