@@ -1238,6 +1238,21 @@ void Cell::fuse_cell( Cell* pCell_to_fuse )
 		}
 
 		// set new position at center of volume 
+			// x_new = (vol_B * x_B + vol_S * x_S ) / (vol_B + vol_S )
+		
+		std::vector<double> new_position = position; // x_B
+		new_position *= phenotype.volume.total; // vol_B * x_B 
+		double total_volume = phenotype.volume.total; 
+		total_volume += pCell_to_fuse->phenotype.volume.total ;  
+
+		axpy( &new_position , pCell_to_fuse->phenotype.volume.total , pCell_to_fuse->position ); // vol_B*x_B + vol_S*x_S
+		new_position /= total_volume; // (vol_B*x_B+vol_S*x_S)/(vol_B+vol_S);
+		
+		this->assign_position( new_position ); 
+
+		// set number of nuclei 
+
+		state.number_of_nuclei += pCell_to_fuse->state.number_of_nuclei; 
 
 		// absorb all the volume(s)
 
@@ -1254,8 +1269,6 @@ void Cell::fuse_cell( Cell* pCell_to_fuse )
 		
 		phenotype.volume.nuclear_solid += pCell_to_fuse->phenotype.volume.nuclear_solid; 
 		pCell_to_fuse->phenotype.volume.nuclear_solid = 0.0; 
-
-		// set target volumes 
 		
 		// consistency calculations 
 		
@@ -1295,6 +1308,11 @@ void Cell::fuse_cell( Cell* pCell_to_fuse )
 		*internalized_substrates += *(pCell_to_fuse->internalized_substrates); 
 		static int n_substrates = internalized_substrates->size(); 
 		pCell_to_fuse->internalized_substrates->assign( n_substrates , 0.0 ); 	
+
+		// set target volume(s)
+
+		phenotype.volume.target_solid_cytoplasmic += pCell_to_fuse->phenotype.volume.target_solid_cytoplasmic;
+		phenotype.volume.target_solid_nuclear += pCell_to_fuse->phenotype.volume.target_solid_nuclear;
 		
 		// trigger removal from the simulation 
 		// pCell_to_eat->die(); // I don't think this is safe if it's in an OpenMP loop 
