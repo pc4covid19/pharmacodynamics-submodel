@@ -211,6 +211,8 @@ Cell_State::Cell_State()
 	simple_pressure = 0.0; 
 	
 	attached_cells.clear(); 
+
+	number_of_nuclei = 1; 
 	
 	return; 
 }
@@ -1217,6 +1219,114 @@ void Cell::ingest_cell( Cell* pCell_to_eat )
 	
 	return; 
 }
+
+void Cell::fuse_cell( Cell* pCell_to_fuse )
+{
+	// don't ingest a cell that's already fused 
+	if( pCell_to_eat->phenotype.volume.total < 1e-15 || this == pCell_to_eat )
+	{ return; } 
+		
+	// make this thread safe 
+	#pragma omp critical
+	{
+		bool volume_was_zero = false; 
+		if( pCell_to_fuse->phenotype.volume.total < 1e-15 )
+		{
+			volume_was_zero = true; 
+			std::cout << this << " " << this->type_name << " fuses " 
+			<< pCell_to_fuse << " " << pCell_to_fuse->type_name << std::endl; 
+		}
+
+		// set new position at center of volume 
+
+		// absorb all the volume(s)
+
+		// absorb fluid volume (all into the cytoplasm) 
+		phenotype.volume.cytoplasmic_fluid += pCell_to_fuse->phenotype.volume.cytoplasmic_fluid; 
+		pCell_to_fuse->phenotype.volume.cytoplasmic_fluid = 0.0; 
+
+		phenotype.volume.nuclear_fluid += pCell_to_fuse->phenotype.volume.nuclear_fluid; 
+		pCell_to_fuse->phenotype.volume.nuclear_fluid = 0.0; 
+
+		// absorb nuclear and cyto solid volume (into the cytoplasm) 
+		phenotype.volume.cytoplasmic_solid += pCell_to_fuse->phenotype.volume.cytoplasmic_solid; 
+		pCell_to_fuse->phenotype.volume.cytoplasmic_solid = 0.0; 
+		
+		phenotype.volume.nuclear_solid += pCell_to_fuse->phenotype.volume.nuclear_solid; 
+		pCell_to_fuse->phenotype.volume.nuclear_solid = 0.0; 
+
+		// set target volumes 
+		
+		// consistency calculations 
+		
+		phenotype.volume.fluid = phenotype.volume.nuclear_fluid + 
+			phenotype.volume.cytoplasmic_fluid; 
+		pCell_to_fuse->phenotype.volume.fluid = 0.0; 
+		
+		phenotype.volume.solid = phenotype.volume.cytoplasmic_solid + 
+			phenotype.volume.nuclear_solid; 
+		pCell_to_fuse->phenotype.volume.solid = 0.0; 
+		
+		phenotype.volume.nuclear = phenotype.volume.nuclear_fluid + 
+			phenotype.volume.nuclear_solid; 
+		pCell_to_fuse->phenotype.volume.nuclear = 0.0; 
+
+		phenotype.volume.cytoplasmic = phenotype.volume.cytoplasmic_fluid + 
+			phenotype.volume.cytoplasmic_solid; 
+		pCell_to_fuse->phenotype.volume.cytoplasmic = 0.0; 
+		
+		phenotype.volume.total = phenotype.volume.nuclear + 
+			phenotype.volume.cytoplasmic; 
+		pCell_to_fuse->phenotype.volume.total = 0.0; 
+
+		phenotype.volume.fluid_fraction = phenotype.volume.fluid / 
+			(  phenotype.volume.total + 1e-16 ); 
+		pCell_to_fuse->phenotype.volume.fluid_fraction = 0.0; 
+
+		phenotype.volume.cytoplasmic_to_nuclear_ratio = phenotype.volume.cytoplasmic_solid / 
+			( phenotype.volume.nuclear_solid + 1e-16 );
+			
+		// update corresponding BioFVM parameters (self-consistency) 
+		set_total_volume( phenotype.volume.total ); 
+		pCell_to_fuse->set_total_volume( 0.0 ); 
+		
+		// absorb the internalized substrates 
+		
+		*internalized_substrates += *(pCell_to_fuse->internalized_substrates); 
+		static int n_substrates = internalized_substrates->size(); 
+		pCell_to_fuse->internalized_substrates->assign( n_substrates , 0.0 ); 	
+		
+		// trigger removal from the simulation 
+		// pCell_to_eat->die(); // I don't think this is safe if it's in an OpenMP loop 
+		
+		// flag it for removal 
+		// pCell_to_eat->flag_for_removal(); 
+		// mark it as dead 
+		pCell_to_fuse->phenotype.death.dead = true; 
+		// set secretion and uptake to zero 
+		pCell_to_fuse->phenotype.secretion.set_all_secretion_to_zero( );  
+		pCell_to_fuse->phenotype.secretion.set_all_uptake_to_zero( ); 
+		
+		// deactivate all custom function 
+		pCell_to_fuse->functions.custom_cell_rule = NULL; 
+		pCell_to_fuse->functions.update_phenotype = NULL; 
+		pCell_to_fuse->functions.contact_function = NULL; 
+
+		// remove all adhesions 
+		// pCell_to_eat->remove_all_attached_cells();
+		
+		// set cell as unmovable and non-secreting 
+		pCell_to_fuse->is_movable = false; 
+		pCell_to_fuse->is_active = false; 
+	}
+
+	// things that have their own thread safety 
+	pCell_to_fuse->flag_for_removal();
+	pCell_to_fuse->remove_all_attached_cells();
+	
+	return; 
+}
+
 
 void Cell::lyse_cell( void )
 {

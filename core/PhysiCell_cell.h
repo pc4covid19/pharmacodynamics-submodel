@@ -141,12 +141,14 @@ class Cell_State
  public:
 	std::vector<Cell*> attached_cells; 
 
-	std::vector<Cell*> neighbors; // not currently tracked! 
+	std::vector<Cell*> neighbors; 
 	std::vector<double> orientation;
 	
 	double simple_pressure; 
 	
 	int number_of_attached_cells( void ); 
+
+	int number_of_nuclei; 
 	
 	Cell_State(); 
 };
@@ -218,6 +220,7 @@ class Cell : public Basic_Agent
 	void copy_data(Cell *);
 	
 	void ingest_cell( Cell* pCell_to_eat ); // for use in predation, e.g., immune cells 
+	void fuse_cell( Cell* pCell_to_fuse ); // useful for virology and some cancer processes
 
 	void attach_cell( Cell* pAddMe ); // done 
 	void detach_cell( Cell* pRemoveMe ); // done 
