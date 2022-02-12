@@ -1223,7 +1223,7 @@ void Cell::ingest_cell( Cell* pCell_to_eat )
 void Cell::fuse_cell( Cell* pCell_to_fuse )
 {
 	// don't ingest a cell that's already fused 
-	if( pCell_to_eat->phenotype.volume.total < 1e-15 || this == pCell_to_eat )
+	if( pCell_to_fuse->phenotype.volume.total < 1e-15 || this == pCell_to_fuse )
 	{ return; } 
 		
 	// make this thread safe 
