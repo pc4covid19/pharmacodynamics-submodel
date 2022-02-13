@@ -97,7 +97,7 @@
 	</overall>
 	
 	<parallel>
-		<omp_num_threads>12</omp_num_threads> <!-- 32 -->
+		<omp_num_threads>11</omp_num_threads> <!-- 32 -->
 	</parallel> 
 
 	<options>
@@ -347,7 +347,7 @@
 					description="fraction of virions absorbed when phagocytosing a cell">1.0</fraction_transferred_when_ingested>
 				<cell_fusion_number type="int" units="none" description="how many times of cell fusion">0</cell_fusion_number>
 				<!-- 0.167 --> 
-				<phagocytosis_rate units="1/min" type="double" desription="rate of phagocytosing a nearby target">0.0000167</phagocytosis_rate> <!-- 0.167 -->
+				<phagocytosis_rate units="1/min" type="double" desription="rate of phagocytosing a nearby target">0.0000167</phagocytosis_rate>
 				<time_to_next_phagocytosis units="min" type="double"    
 					description="time it takes for the neighbor cell to be phagocytosed">0</time_to_next_phagocytosis> 
 				<material_internalisation_rate units="micron^3/min" type="double" 
@@ -445,7 +445,7 @@
 
 			<internalization_rate type="double" units="1/min" description="Rate at which lung epithelium uptakes drug">0.0116</internalization_rate> <!-- 1 hours to reach half max -->
 	                <!-- ln(2) / time to reach half max internal concentration --> 
-			<drug_endo_export type="bool" units="none" description="Turn on the drug effect on virial endocytosis and export or not">true</drug_endo_export>
+			<drug_endo_export type="bool" units="none" description="Turn on the drug effect on virial endocytosis and export or not">false</drug_endo_export>
 			<drug_binding_replication type="bool" units="none" 
 				description="Turn on the drug effect on virial binding and replication or not">false</drug_binding_replication>
 
@@ -461,7 +461,7 @@
 				description="viral load at which cells reach half max apoptosis rate">500</max_apoptosis_half_max_orginal> <!-- 500 -->
 			<half_max_cell_fusion type="double" units="virion" description="viral load at which cell fusion reach half max rate">100</half_max_cell_fusion>
 			<drug_fusion_power type="double" units="none" description="Power that used in function for cell fusion inhibtion">5</drug_fusion_power> 
-			<drug_cell_fusion type="bool" units="none" description="Turn on the drug effect on cell fusion or not">true</drug_cell_fusion>
+			<drug_cell_fusion type="bool" units="none" description="Turn on the drug effect on cell fusion or not">false</drug_cell_fusion>
 
 		
 	</user_parameters>

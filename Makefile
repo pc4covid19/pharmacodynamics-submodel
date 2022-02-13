@@ -10,11 +10,7 @@ CC := g++
 ifdef PHYSICELL_CPP 
 	CC := $(PHYSICELL_CPP)
 endif
-<<<<<<< Updated upstream
-CC := g++-11 
-=======
 # CC := g++-11 
->>>>>>> Stashed changes
 
 ARCH := native # best auto-tuning 
 # ARCH := core2 # a reasonably safe default for most CPUs since 2007
