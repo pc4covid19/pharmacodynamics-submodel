@@ -143,11 +143,13 @@ void pharmacodynamics_response( Cell* pCell, Phenotype& phenotype, double dt )
 	static bool replication_enabled = parameters.bools( "drug_replication" );  
 
 	static int RNA_index =  pCell->custom_data.find_variable_index( "viral_RNA" ); 
+
+	static int n_fusion = pCell->custom_data.find_variable_index("cell_fusion_number"); 
 	
     // uptake new production rate based on drug effect 
 	if ( endo_export_enabled )
 	{
-	   if( pCell->custom_data[RNA_index] >= parameters.doubles("RNA_threshold") )
+	   if( pCell->custom_data[RNA_index] >= (pCell->custom_data[n_fusion] +1) *parameters.doubles("RNA_threshold") )
 		{
                  pCell->custom_data[ "ACE2_endocytosis_rate" ] = interpolate( 
         	   parameters.doubles("ACE2_endocytosis_rate_feedback"),  
@@ -199,7 +201,7 @@ void pharmacodynamics_response( Cell* pCell, Phenotype& phenotype, double dt )
                pCell->custom_data[ drug_effect_intra]);   
 	*/
 
-	if( pCell->custom_data[RNA_index] >= parameters.doubles("RNA_threshold") )
+	if( pCell->custom_data[RNA_index] >= (pCell->custom_data[n_fusion] +1) *parameters.doubles("RNA_threshold") )
 	{
 		pCell->custom_data[ "uncoated_to_RNA_rate" ] = interpolate( 
         		parameters.doubles("uncoated_to_RNA_rate_feedback"),  
