@@ -446,8 +446,8 @@
 			<internalization_rate type="double" units="1/min" description="Rate at which lung epithelium uptakes drug">0.0116</internalization_rate> <!-- 1 hours to reach half max -->
 	                <!-- ln(2) / time to reach half max internal concentration --> 
 			<drug_endo_export type="bool" units="none" description="Turn on the drug effect on virial endocytosis and export or not">true</drug_endo_export>
-			<drug_binding_replication type="bool" units="none" 
-				description="Turn on the drug effect on virial binding and replication or not">true</drug_binding_replication>
+			<drug_replication type="bool" units="none" 
+				description="Turn on the drug effect on virial binding and replication or not">true</drug_replication>
 
 
 		<div_colors type="divider" description="---Cell Color Options--"/>
