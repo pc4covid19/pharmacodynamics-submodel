@@ -184,7 +184,7 @@ void epithelium_fusion( Cell* pCell, Phenotype& phenotype, double dt )
 			double unbound_ACE2 = pTestCell->custom_data[ nR_EU ]; 
 
 			double prob_cell_fusion = Hill_function(assembled_virion_pop, 1, (pCell->custom_data[n_fusion] +1)*parameters.doubles("half_max_virion_fusion")) *
-									  Hill_function(unbound_ACE2, 1, (pCell->custom_data[n_fusion] +1)*parameters.doubles("half_max_ACE2_fusion")) *
+									  Hill_function(unbound_ACE2, 1, (pTestCell->custom_data[n_fusion] +1)*parameters.doubles("half_max_ACE2_fusion")) *
 					  				  pCell->custom_data[ fusion_rate_index ]*dt;  
 
 			// caculate the probability of cell fusion with drug effect 
