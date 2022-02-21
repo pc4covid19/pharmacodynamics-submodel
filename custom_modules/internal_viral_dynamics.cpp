@@ -87,7 +87,7 @@ void internal_virus_model( Cell* pCell, Phenotype& phenotype, double dt )
 	
 	// testing change to a MM like inhibition
 	
-	double kmod = pCell->custom_data["uncoated_to_RNA_rate"] * (1-nR/((pCell->custom_data[n_fusion] +1) *parameters.doubles("RNA_threshold") + nR));
+	double kmod = pCell->custom_data["uncoated_to_RNA_rate"] * (1-pCell->custom_data[nR]/((pCell->custom_data[n_fusion] +1) *parameters.doubles("RNA_threshold") + pCell->custom_data[nR]));
 
 
 	// uncoat endocytosed virus
