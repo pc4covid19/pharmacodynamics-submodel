@@ -127,19 +127,18 @@ std::cout << "receptor : " << __LINE__ << " "
 
     // add negative feedback for ACE2 and endo
     // cell fusion, YW 2022
-    if( pCell->custom_data[RNA_index] >= (pCell->custom_data[n_fusion] +1) *parameters.doubles("RNA_threshold") )
-    {
-    	pCell->custom_data[nR_bind] = parameters.doubles("ACE2_binding_rate_feedback");
-    	if ( not endo_export_enabled )
-    	{
-    		pCell->custom_data[nR_endo] = parameters.doubles("ACE2_endocytosis_rate_feedback");
-    	}
-    	
-    }
 	
+	// testing change to a MM like inhibition
+	
+	double kmod = pCell->custom_data[nR_bind] * (1-pCell->custom_data[RNA_index]/((pCell->custom_data[n_fusion] +1) *parameters.doubles("RNA_threshold") + pCell->custom_data[RNA_index]));
+	double kmod2 = pCell->custom_data[nR_endo];
+	if ( not endo_export_enabled )
+    	{
+			kmod2 = pCell->custom_data[nR_endo] * (1-pCell->custom_data[RNA_index]/((pCell->custom_data[n_fusion] +1) *parameters.doubles("RNA_threshold") + pCell->custom_data[RNA_index]));
+		}
 	// endocytosis 
 	
-	double dR_IB = dt*pCell->custom_data[nR_endo]*pCell->custom_data[nR_EB];
+	double dR_IB = dt*kmod2*pCell->custom_data[nR_EB];
 	if( dR_IB > pCell->custom_data[nR_EB] )
 	{ dR_IB = pCell->custom_data[nR_EB]; }
 	pCell->custom_data[nR_EB] -= dR_IB; // move from external bound
@@ -165,7 +164,7 @@ std::cout << "receptor : " << __LINE__ << " "
 	// update the virion uptake rate 
 	
 	phenotype.secretion.uptake_rates[nV_external] = 
-		pCell->custom_data[nR_bind] * pCell->custom_data[nR_EU]; 
+		kmod * pCell->custom_data[nR_EU]; 
 	
 	return; 
 }

@@ -84,10 +84,10 @@ void internal_virus_model( Cell* pCell, Phenotype& phenotype, double dt )
 
 	// update the feedback with including the cell fusion problem, YW 2022
     // add negative feedback for replication
-    if( pCell->custom_data[nR] >= (pCell->custom_data[n_fusion] +1) *parameters.doubles("RNA_threshold") )
-    {
-    	pCell->custom_data["uncoated_to_RNA_rate"] = parameters.doubles("uncoated_to_RNA_rate_feedback");
-    }
+	
+	// testing change to a MM like inhibition
+	
+	double kmod = pCell->custom_data["uncoated_to_RNA_rate"] * (1-nR/((pCell->custom_data[n_fusion] +1) *parameters.doubles("RNA_threshold") + nR));
 
 
 	// uncoat endocytosed virus
@@ -98,7 +98,7 @@ void internal_virus_model( Cell* pCell, Phenotype& phenotype, double dt )
 	pCell->custom_data[nUV] += dV; 
 
 	// convert uncoated virus to usable mRNA 
-	double dR = dt * pCell->custom_data["uncoated_to_RNA_rate"] * pCell->custom_data[nUV]; 
+	double dR = dt * kmod * pCell->custom_data[nUV]; 
 	if( dR > pCell->custom_data[nUV] )
 	{ dR = pCell->custom_data[nUV]; }
 	pCell->custom_data[nUV] -= dR; 

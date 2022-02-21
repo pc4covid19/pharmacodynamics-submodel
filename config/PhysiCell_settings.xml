@@ -97,7 +97,7 @@
 	</overall>
 	
 	<parallel>
-		<omp_num_threads>24</omp_num_threads> <!-- 32 -->
+		<omp_num_threads>6</omp_num_threads> <!-- 32 -->
 	</parallel> 
 
 	<options>
@@ -108,12 +108,12 @@
 		<folder>output</folder> <!-- use . for root --> 
 
 		<full_data>
-			<interval units="min">60</interval>
+			<interval units="min">120</interval>
 			<enable>true</enable>
 		</full_data>
 		
 		<SVG>
-			<interval units="min">60</interval>
+			<interval units="min">120</interval>
 			<enable>true</enable>
 		</SVG>
 		
@@ -347,7 +347,7 @@
 					description="fraction of virions absorbed when phagocytosing a cell">1.0</fraction_transferred_when_ingested>
 				<cell_fusion_number type="int" units="none" description="how many times of cell fusion">0</cell_fusion_number>
 				<!-- 0.167 --> 
-				<fusion_rate units="1/min" type="double" desription="rate of cell fusion">0.167</fusion_rate>
+				<fusion_rate units="1/min" type="double" desription="rate of cell fusion">0.25</fusion_rate>
 				<time_to_next_fusion units="min" type="double" 
 					description="time it takes for the neighbor cell to be fused">0</time_to_next_fusion> 
 				<material_internalisation_rate units="micron^3/min" type="double" 
@@ -395,7 +395,7 @@
 
         <!-- div_NegativeFeedback type="divider" description="- Add negative feedback for the ACE2 and endo, replication with RNA -"/-->	
             
-			<RNA_threshold type="double" units="RNAs" hidden="true" description="The threshold of adding negative feedback for RNAs">10</RNA_threshold>  <!-- 1 -->
+			<RNA_threshold type="double" units="RNAs" hidden="true" description="The threshold of adding negative feedback for RNAs">50</RNA_threshold>  <!-- 1 -->
 			<ACE2_binding_rate_feedback type="double" units="1/min" hidden="true" description="ACE2 receptor-virus binding rate when RNA reaches threshold">0.0015</ACE2_binding_rate_feedback>  <!-- 0.003 -->
 			<ACE2_endocytosis_rate_feedback type="double" units="1/min" hidden="true" description="ACE2 receptor-virus endocytosis rate when RNA reaches threshold">0.02</ACE2_endocytosis_rate_feedback>  <!-- 0.04 -->
 			<uncoated_to_RNA_rate_feedback type="double" units="1/min" hidden="true" description="Uncoated RNA rate when RNA reaches threshold">0.03</uncoated_to_RNA_rate_feedback>  <!-- 0.04 -->
