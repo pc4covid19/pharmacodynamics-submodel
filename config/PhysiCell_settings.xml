@@ -301,7 +301,7 @@
  
 				<!-- virus adsorption and export -->
 				<virion_export_rate type="double" units="1/min" 
-					description="rate at which a virion is exported from a live cell">0.3</virion_export_rate> <!-- 0.123,  0.01 -->
+					description="rate at which a virion is exported from a live cell">0.1</virion_export_rate> <!-- 0.123,  0.01 -->
 
 				<!-- ACE2 receptor trafficking --> 
 				<unbound_external_ACE2 type="double" units="receptors"
@@ -347,11 +347,11 @@
 					description="fraction of virions absorbed when phagocytosing a cell">1.0</fraction_transferred_when_ingested>
 				<cell_fusion_number type="int" units="none" description="how many times of cell fusion">0</cell_fusion_number>
 				<!-- 0.167 --> 
-				<fusion_rate units="1/min" type="double" desription="rate of cell fusion">0.167</fusion_rate>
+				<fusion_rate units="1/min" type="double" description="rate of cell fusion">0.167</fusion_rate>
 				<time_to_next_fusion units="min" type="double" 
 					description="time it takes for the neighbor cell to be fused">0</time_to_next_fusion> 
 				<material_internalisation_rate units="micron^3/min" type="double" 
-					desription="rate material is ingested by cell fusion">8</material_internalisation_rate>   <!-- 1-->
+					description="rate material is ingested by cell fusion">8</material_internalisation_rate>   <!-- 1-->
 		
 
 			</custom_data>
@@ -395,7 +395,7 @@
 
         <!-- div_NegativeFeedback type="divider" description="- Add negative feedback for the ACE2 and endo, replication with RNA -"/-->	
             
-			<RNA_threshold type="double" units="RNAs" hidden="true" description="The threshold of adding negative feedback for RNAs">10</RNA_threshold>  <!-- 1 -->
+			<RNA_threshold type="double" units="RNAs" hidden="true" description="The threshold of adding negative feedback for RNAs">100</RNA_threshold>  <!-- 1, 10 -->
 			<ACE2_binding_rate_feedback type="double" units="1/min" hidden="true" description="ACE2 receptor-virus binding rate when RNA reaches threshold">0.0015</ACE2_binding_rate_feedback>  <!-- 0.003 -->
 			<ACE2_endocytosis_rate_feedback type="double" units="1/min" hidden="true" description="ACE2 receptor-virus endocytosis rate when RNA reaches threshold">0.02</ACE2_endocytosis_rate_feedback>  <!-- 0.04 -->
 			<uncoated_to_RNA_rate_feedback type="double" units="1/min" hidden="true" description="Uncoated RNA rate when RNA reaches threshold">0.03</uncoated_to_RNA_rate_feedback>  <!-- 0.04 -->
@@ -405,7 +405,7 @@
             
             <!-- endo, export -->
 			<ACE2_endocytosis_rate_original type="double" units="1/min" hidden="true" description="ACE2 receptor-virus endocytosis rate">0.04</ACE2_endocytosis_rate_original>  <!-- 0.01 -->
-			<virion_export_rate_original type="double" units="1/min" hidden="true" description="rate at which a virion is exported from a live cell">0.3</virion_export_rate_original> <!--0.123, 0.01 -->
+			<virion_export_rate_original type="double" units="1/min" hidden="true" description="rate at which a virion is exported from a live cell">0.1</virion_export_rate_original> <!--0.123, 0.01 -->
        		
        		<!-- binding, replication -->
 			<ACE2_binding_rate_original type="double" units="1/min" hidden="true" description="ACE2 receptor-virus binding rate">0.003</ACE2_binding_rate_original> 
@@ -437,7 +437,7 @@
 
 		    <drug_doses type="double" units="uM" description="The injected drug concentration">5.0</drug_doses>		<!-- 5.0-->
 			<EC_50 type="double" units="uM" description="Drug concentration value that gives 50% max effect">2.5</EC_50>  <!-- 2.7-->
-			<Hill_power type="double" units="none" description="Power that used in Hill Function for calculating drug effect">3.5</Hill_power> 
+			<Hill_power type="double" units="none" description="Power that used in Hill Function for calculating drug effect">2.5</Hill_power> 
 			<!-- in this case we use 1.0 in order to simplify it -->   <!-- 2.8-->
 			<drug_efficiency type="double" units="none" description="Drug efficiency on inhibition of virion multiplication ([0, 1])">1.0</drug_efficiency>
 			<dose_duration type="int" units="min" description="The time duration between two dose injection">14400000</dose_duration>
@@ -447,7 +447,7 @@
 	                <!-- ln(2) / time to reach half max internal concentration --> 
 			<drug_endo_export type="bool" units="none" description="Turn on the drug effect on virial endocytosis and export or not">true</drug_endo_export>
 			<drug_replication type="bool" units="none" 
-				description="Turn on the drug effect on virial binding and replication or not">true</drug_replication>
+				description="Turn on the drug effect on virial binding and replication or not">false</drug_replication>
 
 
 		<div_colors type="divider" description="---Cell Color Options--"/>
@@ -461,7 +461,7 @@
 				description="viral load at which cells reach half max apoptosis rate">500</max_apoptosis_half_max_orginal> <!-- 500 -->
 			<half_max_virion_fusion type="double" units="virion" description="viral load at which cell fusion reach half max rate">100</half_max_virion_fusion>
 			<half_max_ACE2_fusion type="double" units="ACE2" description="unbound ACE2 at which cell fusion reach half max rate">200</half_max_ACE2_fusion>
-			<drug_fusion_power type="double" units="none" description="Power that used in function for cell fusion inhibtion">1.5</drug_fusion_power> <!-- 3, 5 -->
+			<drug_fusion_power type="double" units="none" description="Power that used in function for cell fusion inhibtion">2.5</drug_fusion_power> <!-- 3, 5 -->
 			<drug_cell_fusion type="bool" units="none" description="Turn on the drug effect on cell fusion or not">true</drug_cell_fusion>
 
 		
