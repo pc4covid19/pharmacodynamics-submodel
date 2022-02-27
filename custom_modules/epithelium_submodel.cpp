@@ -134,8 +134,8 @@ void epithelium_fusion( Cell* pCell, Phenotype& phenotype, double dt )
 {
 	static int nA_external = microenvironment.find_density_index( "assembled virion" ); 
 	static int drug_effect_intra = pCell->custom_data.find_variable_index("Intracellular_drug_effect"); 
-	static int time_ingest_index = pCell->custom_data.find_variable_index("time_to_next_phagocytosis"); 
-	static int ingest_rate_index = pCell->custom_data.find_variable_index("phagocytosis_rate"); 
+	static int time_fusion_index = pCell->custom_data.find_variable_index("time_to_next_fusion"); 
+	static int fusion_rate_index = pCell->custom_data.find_variable_index("fusion_rate"); 
 	static int n_fusion = pCell->custom_data.find_variable_index("cell_fusion_number"); 
 
 	static int nR_EU = pCell->custom_data.find_variable_index( "unbound_external_ACE2" ); 
@@ -154,7 +154,7 @@ void epithelium_fusion( Cell* pCell, Phenotype& phenotype, double dt )
 	// follow COVID19 model: (Adrianne) check if still phagocytosing something, added if statement to say that if cell is still 
 	// internalising current material not to phagocytose anything else
 
-	if( pCell->custom_data[ time_ingest_index ] > PhysiCell_globals.current_time )
+	if( pCell->custom_data[ time_fusion_index ] > PhysiCell_globals.current_time )
 	{ return; }	
 
 	// https://github.com/MathCancer/PhysiCell/blob/81e85ce1dcb7156864a4460666e60878b82d3e97/sample_projects/virus_macrophage/custom_modules/custom.cpp
@@ -165,7 +165,7 @@ void epithelium_fusion( Cell* pCell, Phenotype& phenotype, double dt )
 	for( int n=0; n < neighbors.size() ; n++ )
 	{
 		pTestCell = neighbors[n]; 
-		// if it is not me and not a macrophage 
+		// if it is not me and not dead
 		if( pTestCell != pCell && pTestCell->phenotype.death.dead == false )
 		{
 			// calculate distance to the cell 
@@ -174,41 +174,37 @@ void epithelium_fusion( Cell* pCell, Phenotype& phenotype, double dt )
 			double distance = norm( displacement ); 
 			
 			double max_distance = pCell->phenotype.geometry.radius + pTestCell->phenotype.geometry.radius; 
-			max_distance *= 1.5;  // 1.1
+			max_distance *= 1.1;  // 1.1, 1.5
 
 			// caculate the mean location
-			std::vector<double> mean_position = 0.5*(pTestCell->position + pCell->position);
+			// std::vector<double> mean_position = 0.5*(pTestCell->position + pCell->position);
 
-			// assume fusion probabbility is positive related with intra-viral load
-			double assembled_virion_pop = pTestCell->phenotype.molecular.internalized_total_substrates[nA_external]; 
-			double prob_cell_fusion = Hill_function(assembled_virion_pop, 1, parameters.doubles("half_max_cell_fusion"))
-					*pCell->custom_data[ ingest_rate_index ]*dt;  
+			// assume fusion probabbility is positive related with assembled virion of cell A, and unbound ACE2 of cell B
+			double assembled_virion_pop = pCell->phenotype.molecular.internalized_total_substrates[nA_external]; 
+			double unbound_ACE2 = pTestCell->custom_data[ nR_EU ]; 
 
-			// caculate the probability of ingest based on drug effect (the larger it is, the smaller probability of cell fusion)
-			// nonliear interplotation, assume r_min = 0
-			// prob = (1-E)^n*r_0 *dt + E^n*r_min *dt = (1-E)^n*r_0 *dt 
+			double prob_cell_fusion = Hill_function(assembled_virion_pop, 1, (pCell->custom_data[n_fusion] +1)*parameters.doubles("half_max_virion_fusion")) *
+									  Hill_function(unbound_ACE2, 1, (pTestCell->custom_data[n_fusion] +1)*parameters.doubles("half_max_ACE2_fusion")) *
+					  				  pCell->custom_data[ fusion_rate_index ]*dt;  
+
+			// caculate the probability of cell fusion with drug effect 
+			// nonliear interplotation, assume prob_min = 0
+			// prob = (1-E)^n *prob_0 + E^n *prob_min = (1-E)^n*prob_0
+
 			double temp = 1 - pCell->custom_data[drug_effect_intra];
 			if( drug_cell_fusion_enabled )
 			{
 				prob_cell_fusion *= std::pow(temp, parameters.doubles("drug_fusion_power"));  // 3, 5
 			}
 			
-			// test for viral load, distance, probability and cell fusion times
-			if( assembled_virion_pop > 10 && distance < max_distance && 
-				   UniformRandom() < prob_cell_fusion &&  pCell->custom_data[ n_fusion ] < 16 )
+			// test for viral load, unbound ACE2, distance, probability and cell fusion times
+			if( assembled_virion_pop > 1 && unbound_ACE2 > 1 && distance < max_distance && 
+				   UniformRandom() < prob_cell_fusion &&  pCell->custom_data[ n_fusion ] < 12 )
 			{
-				// std::cout << "\t\tnom nom nom" << std::endl; 
 
-				// what does the ingest_cell mean in core function 
-				// https://github.com/MathCancer/PhysiCell/blob/d45d290dd6e956bcc4c6899ff193748aad54bab4/core/PhysiCell_cell.cpp#L1163
-
-				pCell->ingest_cell( pTestCell );
-
-				pCell->position = mean_position;      // update the new position as of average 
-				pCell->update_voxel_in_container();   // update in the data structure 
-
-				// cell fusion number adding one and TestCell, as TestCell may have already fused !!!!!!!
+				// cell fusion number adding one and TestCell's, as TestCell may have already fused !!!
 				pCell->custom_data[ n_fusion ] += ( 1+ pTestCell->custom_data[n_fusion] ); 
+				// pCell->custom_data[ n_fusion ] = pCell->state.number_of_nuclei + pTestCell->state.number_of_nuclei; 
 
 				// update ACE2 stuff
 				pCell->custom_data[ nR_EU ] += pTestCell->custom_data[ nR_EU ]; 
@@ -226,16 +222,26 @@ void epithelium_fusion( Cell* pCell, Phenotype& phenotype, double dt )
 				// if cell fusion, virion replicate faster
 				// pCell->custom_data["uncoated_to_RNA_rate"] += parameters.doubles("uncoated_to_RNA_rate_original");
 				// pCell->custom_data["protein_synthesis_rate"] += parameters.doubles("protein_synthesis_rate_original");
-				pCell->custom_data["uncoated_to_RNA_rate"] += pTestCell->custom_data["uncoated_to_RNA_rate"]; 
-				pCell->custom_data["protein_synthesis_rate"] += pTestCell->custom_data["protein_synthesis_rate"]; 
+				// pCell->custom_data["uncoated_to_RNA_rate"] += pTestCell->custom_data["uncoated_to_RNA_rate"]; 
+				// pCell->custom_data["protein_synthesis_rate"] += pTestCell->custom_data["protein_synthesis_rate"]; 
 
 				// if cell fusion, cell can tolerate more virus
 				// pCell->custom_data["max_apoptosis_half_max"] += parameters.doubles("max_apoptosis_half_max_orginal"); 
 				pCell->custom_data["max_apoptosis_half_max"] += pTestCell->custom_data["max_apoptosis_half_max"];
 
-				double time_to_ingest = pTestCell->phenotype.volume.total / pCell->custom_data["material_internalisation_rate"];
-				pCell->custom_data[ time_ingest_index ] = PhysiCell_globals.current_time + time_to_ingest;	
-				
+				double time_to_fusion = pTestCell->phenotype.volume.total / pCell->custom_data["material_internalisation_rate"];
+				pCell->custom_data[ time_fusion_index ] = PhysiCell_globals.current_time + time_to_fusion;	
+
+				// what does the ingest_cell do in core function 
+				// https://github.com/MathCancer/PhysiCell/blob/d45d290dd6e956bcc4c6899ff193748aad54bab4/core/PhysiCell_cell.cpp#L1163
+
+				// pCell->ingest_cell( pTestCell );
+				pCell->fuse_cell( pTestCell );
+
+				// already done in fuse_cell function
+				// pCell->position = mean_position;      // update the new position 
+				// pCell->update_voxel_in_container();   // update in the data structure 
+
 			}
 		}
 	}

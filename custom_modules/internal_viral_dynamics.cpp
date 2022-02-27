@@ -84,9 +84,9 @@ void internal_virus_model( Cell* pCell, Phenotype& phenotype, double dt )
 
 	// update the feedback with including the cell fusion problem, YW 2022
     // add negative feedback for replication
-    if( pCell->custom_data[nR] >= parameters.doubles("RNA_threshold") )
+    if( pCell->custom_data[nR] >= (pCell->custom_data[n_fusion] +1) *parameters.doubles("RNA_threshold") )
     {
-    	pCell->custom_data["uncoated_to_RNA_rate"] = (pCell->custom_data[ n_fusion ] +1 )*parameters.doubles("uncoated_to_RNA_rate_feedback");
+    	pCell->custom_data["uncoated_to_RNA_rate"] = parameters.doubles("uncoated_to_RNA_rate_feedback");
     }
 
 

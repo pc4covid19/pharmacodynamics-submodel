@@ -62,6 +62,8 @@ void receptor_dynamics_model( Cell* pCell, Phenotype& phenotype, double dt )
 	static int RNA_index =  pCell->custom_data.find_variable_index( "viral_RNA" ); 
 	static bool endo_export_enabled = parameters.bools( "drug_endo_export" );  
 
+	static int n_fusion = pCell->custom_data.find_variable_index("cell_fusion_number"); 
+
 /*	
 	static bool done = false;
 	extern Cell* pInfected; 
@@ -124,7 +126,8 @@ std::cout << "receptor : " << __LINE__ << " "
 
 
     // add negative feedback for ACE2 and endo
-    if( pCell->custom_data[RNA_index] >= parameters.doubles("RNA_threshold") )
+    // cell fusion, YW 2022
+    if( pCell->custom_data[RNA_index] >= (pCell->custom_data[n_fusion] +1) *parameters.doubles("RNA_threshold") )
     {
     	pCell->custom_data[nR_bind] = parameters.doubles("ACE2_binding_rate_feedback");
     	if ( not endo_export_enabled )
