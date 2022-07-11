@@ -80,19 +80,20 @@ void internal_virus_model( Cell* pCell, Phenotype& phenotype, double dt )
 	x[0][4] = x[0][4] / Vol;
 
 	double hRNA = pCell->custom_data["RNA_replication_half"] / sVol;
+	double tRNA = parameters.doubles("RNA_threshold") / sVol;
 
 	// update the feedback with including the cell fusion problem, YW 2022
     // add negative feedback for replication
 	
 	// testing change to a MM like inhibition
 	
-	double kmod = pCell->custom_data["uncoated_to_RNA_rate"] * (1-pCell->custom_data[nR]/((pCell->custom_data[n_fusion] +1) *parameters.doubles("RNA_threshold") + pCell->custom_data[nR]));
+	double kmod = pCell->custom_data["uncoated_to_RNA_rate"] * (1- x[0][2] / (tRNA + x[0][2]));
 	//possibly put this in the loop
 
 	for (j = 0; j < 4; j++) {
 		f[j][0] = { -pCell->custom_data["virion_uncoating_rate"] * x[j][0] }; // uncoat endocytosed virus
 		f[j][1] = { pCell->custom_data["virion_uncoating_rate"] * x[j][0] - pCell->custom_data["uncoated_to_RNA_rate"] * x[j][1] }; // convert uncoated virus to usable mRNA 
-		f[j][2] = { pCell->custom_data["uncoated_to_RNA_rate"] * x[j][1] + pCell->custom_data["max_RNA_replication_rate"] / sVol * x[j][2] / (x[j][2] + hRNA) - pCell->custom_data["basal_RNA_degradation_rate"] * x[j][2] }; // RNA replication post uncoated to RNA calc
+		f[j][2] = { pCell->custom_data["uncoated_to_RNA_rate"] * (1 - x[0][2] / (tRNA + x[0][2])) * x[j][1] + pCell->custom_data["max_RNA_replication_rate"] / sVol * x[j][2] / (x[j][2] + hRNA) - pCell->custom_data["basal_RNA_degradation_rate"] * x[j][2] }; // RNA replication post uncoated to RNA calc
 		f[j][3] = { pCell->custom_data["protein_synthesis_rate"] * x[j][2] - pCell->custom_data["virion_assembly_rate"] * x[j][3] }; // use mRNA to create viral protein 
 		f[j][4] = { pCell->custom_data["virion_assembly_rate"] * x[j][3] - pCell->custom_data["virion_export_rate"] * x[j][4] }; // assemble virus
 		if (j == 0 || j == 1) {
