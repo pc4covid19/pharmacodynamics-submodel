@@ -1,4 +1,4 @@
-/*
+	/*
 ###############################################################################
 # If you use PhysiCell in your project, please cite PhysiCell and the version #
 # number, such as below:                                                      #
@@ -64,53 +64,58 @@
 #                                                                             #
 ###############################################################################
 */
-
-#ifndef __PhysiCell_utilities_h__
-#define __PhysiCell_utilities_h__
-
-#include <iostream>
-#include <ctime>
-#include <cmath>
-#include <string>
+ 
 #include <vector>
-#include <chrono>
-#include <random>
+#include <string>
 
-#include <omp.h> 
+#ifndef __PhysiCell_basic_signaling__
+#define __PhysiCell_basic_signaling__
+
+#include "./PhysiCell_constants.h" 
+#include "./PhysiCell_phenotype.h" 
+#include "./PhysiCell_cell.h" 
 
 namespace PhysiCell{
+	
+// std::vector<std::string> 
 
+double Hill_response_function( double s, double half_max , double hill_power ); // done
+// increases from 0 (at s_min) to 1 (at s_max)
+double linear_response_function( double s, double s_min , double s_max ); // done 
+// decreases from 1 (at s_min) to 0 (at s_max)
+double decreasing_linear_response_function( double s, double s_min , double s_max ); // done 
 
-	extern std::vector<unsigned int> physicell_random_seeds; 
+// signal increases/decreases parameter
+// options: hill power
+// options: half max
 
+class Integrated_Signal
+{
+ private:
+ public: 
+	double base_activity; 
+	double max_activity; 
+	
+	std::vector<double> promoters; 
+	std::vector<double> promoter_weights; 
+	double promoters_Hill;
+	double promoters_half_max; 
+	
+	std::vector<double> inhibitors; 
+	std::vector<double> inhibitor_weights; 
+	double inhibitors_Hill;
+	double inhibitors_half_max; 
+	
+	Integrated_Signal();
+	void reset( void ); 
+	
+	void add_signal( char signal_type , double signal , double weight ); 
+	void add_signal( char signal_type , double signal );
 
-void SeedRandom( unsigned int input );
-void SeedRandom( void );
-
-double UniformRandom( void );
-
-int UniformInt( void );
-double NormalRandom( double mean, double standard_deviation );
-double LogNormalRandom( double mean, double standard_deviation );
-
-std::vector<double> UniformOnUnitSphere( void ); 
-std::vector<double> UniformOnUnitCircle( void ); 
-
-std::vector<double> LegacyRandomOnUnitSphere( void ); 
-
-
-double dist_squared(std::vector<double> p1, std::vector<double> p2);
-double dist(std::vector<double> p1, std::vector<double> p2);
-
-std::string get_PhysiCell_version( void ); 
-void get_PhysiCell_version( std::string& pString ); 
-
-void display_citations( std::ostream& os ); 
-void display_citations( void ); 
-void add_software_citation( std::string name , std::string version, std::string DOI, std::string URL ); 
-
-int choose_event( std::vector<double>& probabilities ); 
-
+	double compute_signal( void );
 };
 
-#endif
+
+}; 
+
+#endif 

@@ -33,7 +33,7 @@
 #                                                                             #
 # BSD 3-Clause License (see https://opensource.org/licenses/BSD-3-Clause)     #
 #                                                                             #
-# Copyright (c) 2015-2018, Paul Macklin and the PhysiCell Project             #
+# Copyright (c) 2015-2022, Paul Macklin and the PhysiCell Project             #
 # All rights reserved.                                                        #
 #                                                                             #
 # Redistribution and use in source and binary forms, with or without          #
@@ -83,6 +83,8 @@ namespace PhysiCell{
 class Cell;
 class Cycle_Model; 
 class Phenotype; 
+
+class Cell_Definition; 
 
 /*
 // future use?
@@ -271,7 +273,11 @@ class Death
 	void trigger_death( int death_model_index ); // done 
 	
 	Cycle_Model& current_model( void ); // done
-	Death_Parameters& current_parameters( void ); // done 
+	Death_Parameters& current_parameters( void ); // done '
+
+	// ease of access
+	double& apoptosis_rate(void); 
+	double& necrosis_rate(void); 
 };
 
 class Volume
@@ -356,15 +362,23 @@ class Mechanics
  public:
 	double cell_cell_adhesion_strength; 
 	double cell_BM_adhesion_strength;
+
 	double cell_cell_repulsion_strength;
 	double cell_BM_repulsion_strength; 
-	
+
+	std::vector<double> cell_adhesion_affinities; 
+	double& cell_adhesion_affinity( std::string type_name ); // done 
+	void sync_to_cell_definitions(); // done 
+	void set_fully_heterotypic( void ); // done 
+	void set_fully_homotypic( Cell* pCell ); // done 
+
 	// this is a multiple of the cell (equivalent) radius
 	double relative_maximum_adhesion_distance; 
 	// double maximum_adhesion_distance; // needed? 
 	
 	double relative_maximum_attachment_distance; 
 	double relative_detachment_distance; 
+	
 	int maximum_number_of_attachments; 
 	double attachment_elastic_constant; 
 	double maximum_attachment_rate; 
@@ -401,6 +415,14 @@ class Motility
 	
 	int chemotaxis_index; 
 	int chemotaxis_direction; 
+	
+	// advanced chemotaxis 
+	std::vector<double> chemotactic_sensitivities; 
+	double& chemotactic_sensitivity( std::string name ); 
+	
+	void sync_to_current_microenvironment( void ); 
+	void sync_to_microenvironment( Microenvironment* pNew_Microenvironment ); 
+	
 		
 	Motility(); // done 
 };
@@ -433,6 +455,12 @@ class Secretion
 	void set_all_uptake_to_zero( void ); // NEW
 	void scale_all_secretion_by_factor( double factor ); // NEW
 	void scale_all_uptake_by_factor( double factor ); // NEW
+
+	// ease of access
+	double& secretion_rate( std::string name ); 
+	double& uptake_rate( std::string name ); 
+	double& saturation_density( std::string name ); 
+	double& net_export_rate( std::string name );  	
 };
 
 class Cell_Functions
@@ -542,7 +570,107 @@ class Molecular
 		
 		// use this 
 		void sync_to_cell( Basic_Agent* pCell ); 
+
+		// ease of access 
+		double&  internalized_total_substrate( std::string name ); 
 		
+};
+
+class Intracellular
+{
+ private:
+ public:
+    std::string intracellular_type;  // specified in XML <intracellular type="...">:  "maboss", "sbml", ...
+	// bool enabled; 
+
+    // ==========  specific to SBML ==============
+    // std::string sbml_filename;
+
+	
+    // ================  generic  ================
+	// This function parse the xml cell definition
+	virtual void initialize_intracellular_from_pugixml(pugi::xml_node& node) = 0;
+	
+	// This function initialize the model, needs to be called on each cell once created
+	virtual void start() = 0;
+	
+	// This function checks if it's time to update the model
+	virtual bool need_update() = 0;
+
+	// This function update the model for the time_step defined in the xml definition
+	virtual void update() = 0;
+
+	// Get value for model parameter
+	virtual double get_parameter_value(std::string name) = 0;
+	
+	// Set value for model parameter
+	virtual void set_parameter_value(std::string name, double value) = 0;
+
+	virtual std::string get_state() = 0;  
+	
+	virtual Intracellular* clone() = 0;
+	
+	virtual ~Intracellular(){};
+	
+
+    // ================  specific to "maboss" ================
+	virtual bool has_variable(std::string name) = 0; 
+	virtual bool get_boolean_variable_value(std::string name) = 0;
+	virtual void set_boolean_variable_value(std::string name, bool value) = 0;
+	// virtual bool get_double_variable_value(std::string name) = 0;
+	// virtual void set_double_variable_value(std::string name, bool value) = 0;
+	virtual void print_current_nodes() = 0;
+	
+
+    // ================  specific to "roadrunner" ================
+    virtual int update_phenotype_parameters(PhysiCell::Phenotype& phenotype) = 0;
+    virtual int validate_PhysiCell_tokens(PhysiCell::Phenotype& phenotype) = 0;
+    virtual int validate_SBML_species() = 0;
+    virtual int create_custom_data_for_SBML(PhysiCell::Phenotype& phenotype) = 0;
+};
+
+class Cell_Interactions
+{
+ private:
+ public: 
+	// phagocytosis parameters (e.g., macrophages)
+	double dead_phagocytosis_rate; 
+	std::vector<double> live_phagocytosis_rates; 
+	// attack parameters (e.g., T cells)
+	std::vector<double> attack_rates;
+	double damage_rate;  
+	// cell fusion parameters 
+	std::vector<double> fusion_rates;
+	
+	// initialization 
+	Cell_Interactions(); // done 
+	void sync_to_cell_definitions(); // done 
+	
+	// ease of access 
+	double& live_phagocytosis_rate( std::string type_name ); // done 
+	double& attack_rate( std::string type_name ); // done 
+	double& fusion_rate( std::string type_name ); // done 
+	
+	// automated cell phagocytosis, attack, and fusion 
+//	void perform_interactions( Cell* pCell, Phenotype& phenotype, double dt ); 
+};
+
+class Cell_Transformations
+{
+ private:
+ public: 
+	// rates of transforming into different cell types 
+	std::vector<double> transformation_rates; 
+	
+	// initialization
+	Cell_Transformations(); // done 
+	void sync_to_cell_definitions(); // done 
+	
+	// ease of access 
+	double& transformation_rate( std::string type_name ); // done
+	
+	// automated cell transformations
+	// void perform_transformations( Cell* pCell, Phenotype& phenotype, double dt ); 
 };
 
 class Phenotype
@@ -561,9 +689,19 @@ class Phenotype
 	Secretion secretion; 
 	
 	Molecular molecular; 
+
+    // We need it to be a pointer to allow polymorphism
+	// then this object could be a MaBoSSIntracellular, or a RoadRunnerIntracellular
+	Intracellular* intracellular;
+	
+	Cell_Interactions cell_interactions; 
+	Cell_Transformations cell_transformations; 
 	
 	Phenotype(); // done 
-	
+	Phenotype(const Phenotype &p);
+	~Phenotype();
+	Phenotype& operator=(const Phenotype &p );
+
 	void sync_to_functions( Cell_Functions& functions ); // done 
 	
 	void sync_to_microenvironment( Microenvironment* pMicroenvironment ); 

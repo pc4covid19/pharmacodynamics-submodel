@@ -33,7 +33,7 @@
 #                                                                             #
 # BSD 3-Clause License (see https://opensource.org/licenses/BSD-3-Clause)     #
 #                                                                             #
-# Copyright (c) 2015-2018, Paul Macklin and the PhysiCell Project             #
+# Copyright (c) 2015-2022, Paul Macklin and the PhysiCell Project             #
 # All rights reserved.                                                        #
 #                                                                             #
 # Redistribution and use in source and binary forms, with or without          #
@@ -353,11 +353,6 @@ bool create_cytometry_cycle_models( void )
 	flow_cytometry_separated_cycle_model.phases[2].entry_function = NULL;		
 	flow_cytometry_separated_cycle_model.phases[3].entry_function = NULL;		
 	
-	
-	
-	
-	
-	
 	return true; 
 }
 
@@ -528,7 +523,7 @@ void standard_volume_update_function( Cell* pCell, Phenotype& phenotype, double 
 	if( phenotype.volume.fluid < 0.0 )
 	{ phenotype.volume.fluid = 0.0; }
 		
-	phenotype.volume.nuclear_fluid = (phenotype.volume.nuclear / phenotype.volume.total) * 
+	phenotype.volume.nuclear_fluid = (phenotype.volume.nuclear / (phenotype.volume.total+1e-16) ) * 
 		( phenotype.volume.fluid );
 	phenotype.volume.cytoplasmic_fluid = phenotype.volume.fluid - phenotype.volume.nuclear_fluid; 
 
@@ -566,8 +561,52 @@ void standard_volume_update_function( Cell* pCell, Phenotype& phenotype, double 
 
 void basic_volume_model( Cell* pCell, Phenotype& phenotype, double dt )
 {
+	// This model does not simulate a nucleus, and sets all nuclear volumes to zero. 
+	// The total volume is most relevant. Use the cytoplasmic volume if you must. 
+	
+	// update fluid volume 
+	phenotype.volume.fluid += dt * phenotype.volume.fluid_change_rate * 
+	( phenotype.volume.target_fluid_fraction * phenotype.volume.total - phenotype.volume.fluid );
+		
+	// if the fluid volume is negative, set to zero
+	if( phenotype.volume.fluid < 0.0 )
+	{ phenotype.volume.fluid = 0.0; }
+
+	// now distribute fluid to cytoplasm and nucleus 
+		
+	phenotype.volume.nuclear_fluid = 0.0; 
+		// (phenotype.volume.nuclear / phenotype.volume.total) * ( phenotype.volume.fluid );
+	phenotype.volume.cytoplasmic_fluid = phenotype.volume.fluid;
+		// - phenotype.volume.nuclear_fluid; 
+
+	// biomass creation 
+
+	phenotype.volume.nuclear_solid = 0; 
+	
+	// don't overwrite target_solid_cytoplasmic. 
+	phenotype.volume.cytoplasmic_solid += dt * phenotype.volume.cytoplasmic_biomass_change_rate * 
+		( phenotype.volume.target_solid_cytoplasmic - phenotype.volume.cytoplasmic_solid );	
+	if( phenotype.volume.cytoplasmic_solid < 0.0 )
+	{ phenotype.volume.cytoplasmic_solid = 0.0; }
+
+	// bookkeeping 
+	
+	// phenotype.volume.solid = phenotype.volume.nuclear_solid + phenotype.volume.cytoplasmic_solid;
+	phenotype.volume.solid = phenotype.volume.cytoplasmic_solid;
+	
+	phenotype.volume.nuclear = 0.0; // phenotype.volume.nuclear_solid + phenotype.volume.nuclear_fluid; 
+	phenotype.volume.cytoplasmic = phenotype.volume.cytoplasmic_solid + phenotype.volume.cytoplasmic_fluid; 
+	
+	phenotype.volume.calcified_fraction = dt * phenotype.volume.calcification_rate 
+		* (1- phenotype.volume.calcified_fraction);
+   
+	phenotype.volume.total = phenotype.volume.cytoplasmic; //  + phenotype.volume.nuclear; 
 	
 	
+	phenotype.volume.fluid_fraction = phenotype.volume.fluid / 
+		( 1e-16 + phenotype.volume.total ); 
+   
+	phenotype.geometry.update( pCell,phenotype,dt );
 	
 	return; 
 }
@@ -580,6 +619,7 @@ void standard_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt
 	}
 	
 	pCell->state.simple_pressure = 0.0; 
+	pCell->state.neighbors.clear(); // new 1.8.0
 	
 	//First check the neighbors in my current voxel
 	std::vector<Cell*>::iterator neighbor;
@@ -612,12 +652,14 @@ void standard_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt
 	return; 
 }
 
-void standard_add_basement_membrane_interactions( Cell* pCell, Phenotype phenotype, double dt )
+void standard_add_basement_membrane_interactions( Cell* pCell, Phenotype& phenotype, double dt )
 {
 	if( pCell->functions.calculate_distance_to_membrane == NULL )
 	{ return; }
+	
 	double max_interactive_distance = phenotype.mechanics.relative_maximum_adhesion_distance * phenotype.geometry.radius;
-	double distance = pCell->functions.calculate_distance_to_membrane(pCell,phenotype,dt); //Note that the distance_to_membrane function must set displacement values (as a normal vector)
+	double distance = pCell->functions.calculate_distance_to_membrane(pCell,phenotype,dt); 
+	//Note that the distance_to_membrane function must set displacement values (as a normal vector)
 		
 	double temp_a=0;
 	// Adhesion to basement membrane
@@ -643,6 +685,31 @@ void standard_add_basement_membrane_interactions( Cell* pCell, Phenotype phenoty
 	return;	
 }
 
+void standard_domain_edge_avoidance_interactions( Cell* pCell, Phenotype& phenotype, double dt )
+{
+	if( pCell->functions.calculate_distance_to_membrane == NULL )
+	{ pCell->functions.calculate_distance_to_membrane = distance_to_domain_edge; }
+	phenotype.mechanics.cell_BM_repulsion_strength = 100;  
+		
+	double max_interactive_distance = phenotype.mechanics.relative_maximum_adhesion_distance * phenotype.geometry.radius;
+	double distance = pCell->functions.calculate_distance_to_membrane(pCell,phenotype,dt); 
+	//Note that the distance_to_membrane function must set displacement values (as a normal vector)
+		
+	// Repulsion from basement membrane
+	double temp_r = 0;
+	if(distance < phenotype.geometry.radius)
+	{
+		temp_r = (1- distance/phenotype.geometry.radius);
+		temp_r *= temp_r;
+		temp_r *= phenotype.mechanics.cell_BM_repulsion_strength;
+	}
+	if( fabs( temp_r ) < 1e-16 )
+	{ return; }
+	
+	axpy( &( pCell->velocity ) , temp_r , pCell->displacement ); 
+	return;
+}
+
 void empty_function( Cell* pCell, Phenotype& phenotype, double dt )
 { return; } 
 
@@ -658,7 +725,7 @@ void initialize_default_cell_definition( void )
 {
 	// If the standard models have not yet been created, do so now. 
 	create_standard_cycle_and_death_models();
-		
+	
 	// set the microenvironment pointer 
 	cell_defaults.pMicroenvironment = NULL;
 	if( BioFVM::get_default_microenvironment() != NULL )
@@ -692,7 +759,7 @@ void initialize_default_cell_definition( void )
 	cell_defaults.functions.calculate_distance_to_membrane = NULL; 
 	
 	cell_defaults.functions.set_orientation = NULL;
-
+	
 	// add the standard death models to the default phenotype. 
 	cell_defaults.phenotype.death.add_death_model( 0.00319/60.0 , &apoptosis , apoptosis_parameters );
 		// MCF10A, to get a 2% apoptotic index 
@@ -702,6 +769,15 @@ void initialize_default_cell_definition( void )
 	cell_defaults.phenotype.cycle.sync_to_cycle_model( cell_defaults.functions.cycle_model ); 
 	
 	// set molecular defaults 
+	
+	// new March 2022 : make sure Cell_Interactions and Cell_Transformations 
+	// 					are appropriately sized. Same on motiltiy. 
+	//                  The Cell_Definitions constructor doesn't catch 
+	//					these for the cell_defaults 
+	cell_defaults.phenotype.cell_interactions.sync_to_cell_definitions(); 
+	cell_defaults.phenotype.cell_transformations.sync_to_cell_definitions(); 
+	cell_defaults.phenotype.motility.sync_to_current_microenvironment(); 
+	cell_defaults.phenotype.mechanics.sync_to_cell_definitions(); 
 	
 	return; 	
 }
@@ -844,24 +920,78 @@ void chemotaxis_function( Cell* pCell, Phenotype& phenotype , double dt )
 	return;
 }
 
+void advanced_chemotaxis_function_normalized( Cell* pCell, Phenotype& phenotype , double dt )
+{
+	// We'll work directly on the migration bias direction 
+	std::vector<double>* pVec = &(phenotype.motility.migration_bias_direction);  
+	// reset to zero. use memset to be faster??
+	pVec->assign( 3, 0.0 ); 
+	
+	// a place to put each gradient prior to normalizing it 
+	std::vector<double> temp(3,0.0); 
+
+	// weighted combination of the gradients 
+	for( int i=0; i < phenotype.motility.chemotactic_sensitivities.size(); i++ )
+	{
+		// get and normalize ith gradient 
+		temp = pCell->nearest_gradient(i); 
+		normalize( &temp ); 
+		axpy( pVec , phenotype.motility.chemotactic_sensitivities[i] , temp ); 
+	}
+	// normalize that 
+	normalize( pVec ); 
+	
+	return;
+}
+
+void advanced_chemotaxis_function( Cell* pCell, Phenotype& phenotype , double dt )
+{
+	// We'll work directly on the migration bias direction 
+	std::vector<double>* pVec = &(phenotype.motility.migration_bias_direction);  
+	// reset to zero. use memset to be faster??
+	pVec->assign( 3, 0.0 ); 
+
+	// weighted combination of the gradients 
+	for( int i=0; i < phenotype.motility.chemotactic_sensitivities.size(); i++ )
+	{
+		// get and normalize ith gradient 
+		axpy( pVec , phenotype.motility.chemotactic_sensitivities[i] , pCell->nearest_gradient(i) ); 
+	}
+	// normalize that 
+	normalize( pVec ); 
+
+/*
+ #pragma omp critical
+ {
+	std::cout << "\t\ttype: " << pCell->type_name 
+	<< " bias: " << phenotype.motility.migration_bias 
+	<< " speed: " << phenotype.motility.migration_speed 
+	<< " direction: " << phenotype.motility.migration_bias_direction << std::endl; 
+ }
+ */
+
+	return;
+}
+
 void standard_elastic_contact_function( Cell* pC1, Phenotype& p1, Cell* pC2, Phenotype& p2 , double dt )
 {
 	if( pC1->position.size() != 3 || pC2->position.size() != 3 )
-	{
-		#pragma omp critical
-		{	
-			/*
-			std::cout << "what?! " << std::endl
-			<< pC1 << " : " << pC1->type << " " << pC1->type_name << " " << pC1->position << std::endl 
-			<< pC2 << " : " << pC2->type << " " << pC2->type_name << " " << pC2->position << std::endl ;
-			*/
-		}
-		return; 
-	}
+	{ return; }
 	
 	std::vector<double> displacement = pC2->position;
 	displacement -= pC1->position; 
-	axpy( &(pC1->velocity) , p1.mechanics.attachment_elastic_constant , displacement ); 
+
+	// update May 2022 - effective adhesion 
+	int ii = find_cell_definition_index( pC1->type ); 
+	int jj = find_cell_definition_index( pC2->type ); 
+
+	double adhesion_ii = pC1->phenotype.mechanics.attachment_elastic_constant * pC1->phenotype.mechanics.cell_adhesion_affinities[jj]; 
+	double adhesion_jj = pC2->phenotype.mechanics.attachment_elastic_constant * pC2->phenotype.mechanics.cell_adhesion_affinities[ii]; 
+
+	double effective_attachment_elastic_constant = sqrt( adhesion_ii*adhesion_jj ); 
+
+	// axpy( &(pC1->velocity) , p1.mechanics.attachment_elastic_constant , displacement ); 
+	axpy( &(pC1->velocity) , effective_attachment_elastic_constant , displacement ); 
 	return; 
 }
 
@@ -879,4 +1009,225 @@ void evaluate_interactions( Cell* pCell, Phenotype& phenotype, double dt )
 	return; 
 }
 
+double distance_to_domain_edge(Cell* pCell, Phenotype& phenotype, double dummy)
+{
+	static double tolerance = 1e-7;
+	static double one_over_sqrt_2 = 0.70710678118;
+	static double one_over_sqrt_3 = 0.57735026919; 
+	
+		
+	double min_distance = 9e99; 
+	int nearest_boundary = -1; 
+	
+	// check against xL and xU
+	double temp_distance = pCell->position[0] - microenvironment.mesh.bounding_box[0]; 
+	if( temp_distance < min_distance )
+	{
+		min_distance = temp_distance; 
+		nearest_boundary = 0; 
+	}
+	temp_distance = microenvironment.mesh.bounding_box[3] - pCell->position[0]; 
+	if( temp_distance < min_distance )
+	{
+		min_distance = temp_distance; 
+		nearest_boundary = 1; 
+	}
+	
+	// check against yL and yU
+	temp_distance = pCell->position[1] - microenvironment.mesh.bounding_box[1]; 
+	if( temp_distance < min_distance )
+	{
+		min_distance = temp_distance; 
+		nearest_boundary = 2; 
+	}
+	temp_distance = microenvironment.mesh.bounding_box[4] - pCell->position[1]; 
+	if( temp_distance < min_distance )
+	{
+		min_distance = temp_distance; 
+		nearest_boundary = 3; 
+	}	
+	
+	if( default_microenvironment_options.simulate_2D == false )
+	{
+		// if in 3D, check against zL and zU
+		temp_distance = pCell->position[2] - microenvironment.mesh.bounding_box[2]; 
+		if( temp_distance < min_distance )
+		{
+			min_distance = temp_distance; 
+			nearest_boundary = 4; 
+		}
+		temp_distance = microenvironment.mesh.bounding_box[5] - pCell->position[2]; 
+		if( temp_distance < min_distance )
+		{
+			min_distance = temp_distance; 
+			nearest_boundary = 5; 
+		}			
+		
+		// check for 3D exceptions 
+		
+		// lines 
+		if( fabs( (pCell->position[0]) - (pCell->position[1]) ) < tolerance && 
+			fabs( (pCell->position[1]) - (pCell->position[2]) ) < tolerance && 
+			fabs( (pCell->position[0]) - (pCell->position[2]) ) < tolerance )
+		{
+			if( pCell->position[0] > 0 )
+			{
+				if( pCell->position[0] > 0 && pCell->position[1] > 0 )
+				{ pCell->displacement = { -one_over_sqrt_3 , -one_over_sqrt_3 , -one_over_sqrt_3 }; }
+				if( pCell->position[0] < 0 && pCell->position[1] > 0 )
+				{ pCell->displacement = { one_over_sqrt_3 , -one_over_sqrt_3 , -one_over_sqrt_3 }; }
+				
+				if( pCell->position[0] > 0 && pCell->position[1] < 0 )
+				{ pCell->displacement = { -one_over_sqrt_3 , one_over_sqrt_3 , -one_over_sqrt_3 }; }
+				if( pCell->position[0] < 0 && pCell->position[1] < 0 )
+				{ pCell->displacement = { one_over_sqrt_3 , one_over_sqrt_3 , -one_over_sqrt_3 }; }
+			} 
+			else
+			{
+				if( pCell->position[0] > 0 && pCell->position[1] > 0 )
+				{ pCell->displacement = { -one_over_sqrt_3 , -one_over_sqrt_3 , one_over_sqrt_3 }; }
+				if( pCell->position[0] < 0 && pCell->position[1] > 0 )
+				{ pCell->displacement = { one_over_sqrt_3 , -one_over_sqrt_3 , one_over_sqrt_3 }; }
+				
+				if( pCell->position[0] > 0 && pCell->position[1] < 0 )
+				{ pCell->displacement = { -one_over_sqrt_3 , one_over_sqrt_3 , one_over_sqrt_3 }; }
+				if( pCell->position[0] < 0 && pCell->position[1] < 0 )
+				{ pCell->displacement = { one_over_sqrt_3 , one_over_sqrt_3 , one_over_sqrt_3 }; }				
+			}
+			return min_distance; 
+		}
+		
+		// planes - let's not worry for today 
+		
+	}
+	else
+	{
+		// check for 2D  exceptions 
+		
+		if( fabs( (pCell->position[0]) - (pCell->position[1]) ) < tolerance )
+		{
+			if( pCell->position[0] > 0 && pCell->position[1] > 0 )
+			{ pCell->displacement = { -one_over_sqrt_2 , -one_over_sqrt_2 , 0 }; }
+			if( pCell->position[0] < 0 && pCell->position[1] > 0 )
+			{ pCell->displacement = { one_over_sqrt_2 , -one_over_sqrt_2 , 0 }; }
+			
+			if( pCell->position[0] > 0 && pCell->position[1] < 0 )
+			{ pCell->displacement = { -one_over_sqrt_2 , one_over_sqrt_2 , 0 }; }
+			if( pCell->position[0] < 0 && pCell->position[1] < 0 )
+			{ pCell->displacement = { one_over_sqrt_2 , one_over_sqrt_2 , 0 }; }
+			return min_distance; 
+		}
+	}
+	
+	// no exceptions 
+	switch(nearest_boundary)
+	{
+		case 0:
+			pCell->displacement = {1,0,0}; 
+			return min_distance; 
+		case 1:
+			pCell->displacement = {-1,0,0}; 
+			return min_distance;
+		case 2:
+			pCell->displacement = {0,1,0}; 
+			return min_distance; 
+		case 3: 
+			pCell->displacement = {0,-1,0}; 
+			return min_distance; 
+		case 4: 
+			pCell->displacement = {0,0,1}; 
+			return min_distance; 
+		case 5: 
+			pCell->displacement = {0,0,-1}; 
+			return min_distance; 
+		default:
+			pCell->displacement = {0,0,0};
+			return 9e99; 
+	}
+	
+	pCell->displacement = {0,0,0};
+	return 9e99; 
+}	
+
+void standard_cell_cell_interactions( Cell* pCell, Phenotype& phenotype, double dt )
+{
+	if( phenotype.death.dead == true )
+	{ return; }
+	
+	Cell* pTarget = NULL; 
+	int type = -1; 
+	std::string type_name = "none";
+	double probability = 0.0; 
+	
+	bool attacked = false; 
+	bool phagocytosed = false; 
+	bool fused = false; 
+	
+	for( int n=0; n < pCell->state.neighbors.size(); n++ )
+	{
+		pTarget = pCell->state.neighbors[n]; 
+		type = pTarget->type; 
+		type_name = pTarget->type_name; 
+		
+		if( pTarget->phenotype.volume.total < 1e-15 )
+		{ break; } 
+		
+		if( pTarget->phenotype.death.dead == true )
+		{
+			// dead phagocytosis 
+			probability = phenotype.cell_interactions.dead_phagocytosis_rate * dt; 
+			if( UniformRandom() < probability ) 
+			{ pCell->ingest_cell(pTarget); } 
+		}
+		else
+		{
+			// live phagocytosis
+			// assume you can only phagocytose one at a time for now 
+			probability = phenotype.cell_interactions.live_phagocytosis_rate(type_name) * dt; // s[type] * dt;  
+			if( UniformRandom() < probability && phagocytosed == false ) 
+			{
+				pCell->ingest_cell(pTarget);
+				phagocytosed = true; 
+			} 
+			
+			// attack 
+			// assume you can only attack one cell at a time 
+			probability = phenotype.cell_interactions.attack_rate(type_name)*dt; // s[type] * dt;  
+			if( UniformRandom() < probability && attacked == false ) 
+			{
+				pCell->attack_cell(pTarget,dt); 
+				attacked = true;
+			} 
+			
+			// fusion 
+			// assume you can only fuse once cell at a time 
+			probability = phenotype.cell_interactions.fusion_rate(type_name)*dt; // s[type] * dt;  
+			if( UniformRandom() < probability && fused == false  ) 
+			{
+				pCell->fuse_cell(pTarget);
+				fused = true; 
+			} 
+		}
+	}	
+}
+
+void standard_cell_transformations( Cell* pCell, Phenotype& phenotype, double dt )
+{
+	if( phenotype.death.dead == true )
+	{ return; }
+
+	double probability = 0.0; 
+	for( int i=0 ; i < phenotype.cell_transformations.transformation_rates.size() ; i++ )
+	{
+		probability = phenotype.cell_transformations.transformation_rates[i] * dt;  
+		if( UniformRandom() <= probability ) 
+		{
+			// std::cout << "Transforming from " << pCell->type_name << " to " << cell_definitions_by_index[i]->name << std::endl; 
+			pCell->convert_to_cell_definition( *cell_definitions_by_index[i] ); 
+			return; 
+		} 
+	}
+	
+}
+	
 };

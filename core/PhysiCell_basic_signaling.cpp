@@ -64,53 +64,142 @@
 #                                                                             #
 ###############################################################################
 */
+ 
+#include "./PhysiCell_basic_signaling.h"
 
-#ifndef __PhysiCell_utilities_h__
-#define __PhysiCell_utilities_h__
-
-#include <iostream>
-#include <ctime>
-#include <cmath>
-#include <string>
-#include <vector>
-#include <chrono>
-#include <random>
-
-#include <omp.h> 
+using namespace BioFVM; 
 
 namespace PhysiCell{
 
+Integrated_Signal::Integrated_Signal()
+{
+	base_activity = 0.0; 
+	max_activity = 1.0; 
+	
+	promoters.clear(); 
+	promoter_weights.clear(); 
+	
+	promoters_half_max = 0.1;
+	promoters_Hill = 4; 
+	
+	inhibitors.clear(); 
+	inhibitor_weights.clear(); 
+	
+	inhibitors_half_max = 0.1; 
+	inhibitors_Hill = 4; 
+	
+	return; 
+}
 
-	extern std::vector<unsigned int> physicell_random_seeds; 
+void Integrated_Signal::reset( void )
+{
+	promoters.clear(); 
+	promoter_weights.clear(); 
 
+	inhibitors.clear(); 
+	inhibitor_weights.clear(); 
+	return; 
+}
 
-void SeedRandom( unsigned int input );
-void SeedRandom( void );
+double Integrated_Signal::compute_signal( void )
+{
+	double pr = 0.0; 
+	double w = 0.0; 
+	for( int k=0 ; k < promoters.size() ; k++ )
+	{ pr += promoters[k]; w += promoter_weights[k]; } 
+	w += 1e-16; 
+	pr /= w; 
+	
+	double inhib = 0.0; 
+	w = 0.0; 
+	for( int k=0 ; k < inhibitors.size() ; k++ )
+	{ inhib += inhibitors[k]; w += inhibitor_weights[k]; } 
+	w += 1e-16; 
+	inhib /= w; 
+	
+	double Pn = pow( pr , promoters_Hill ); 
+	double Phalf = pow( promoters_half_max , promoters_Hill ); 
 
-double UniformRandom( void );
+	double In = pow( inhib , inhibitors_Hill ); 
+	double Ihalf = pow( inhibitors_half_max , inhibitors_Hill ); 
+	
+	double P = Pn / ( Pn + Phalf ); 
+	double I = 1.0 / ( In + Ihalf ); 
+	
+	double output = max_activity; 
+	output -= base_activity; //(max-base)
+	output *= P; // (max-base)*P 
+	output += base_activity; // base + (max-base)*P 
+	output *= I; // (base + (max-base)*P)*I; 
 
-int UniformInt( void );
-double NormalRandom( double mean, double standard_deviation );
-double LogNormalRandom( double mean, double standard_deviation );
-
-std::vector<double> UniformOnUnitSphere( void ); 
-std::vector<double> UniformOnUnitCircle( void ); 
-
-std::vector<double> LegacyRandomOnUnitSphere( void ); 
-
-
-double dist_squared(std::vector<double> p1, std::vector<double> p2);
-double dist(std::vector<double> p1, std::vector<double> p2);
-
-std::string get_PhysiCell_version( void ); 
-void get_PhysiCell_version( std::string& pString ); 
-
-void display_citations( std::ostream& os ); 
-void display_citations( void ); 
-void add_software_citation( std::string name , std::string version, std::string DOI, std::string URL ); 
-
-int choose_event( std::vector<double>& probabilities ); 
-
+	return output; 
 };
 
-#endif
+void Integrated_Signal::add_signal( char signal_type , double signal , double weight )
+{
+	if( signal_type == 'P' || signal_type == 'p' )
+	{
+		promoters.push_back( signal ); 
+		promoter_weights.push_back( weight ); 
+		return; 
+	}
+	if( signal_type == 'I' || signal_type == 'i' )
+	{
+		inhibitors.push_back( signal ); 
+		inhibitor_weights.push_back( weight ); 
+		return; 
+	}
+	return; 
+}
+
+void Integrated_Signal::add_signal( char signal_type , double signal )
+{ return add_signal( signal_type , signal , 1.0 ); }
+
+double Hill_response_function( double s, double half_max , double hill_power )
+{ 
+    // newer. only one expensive a^b operation. 45% less computationl expense. 
+
+	// give an early exit possibility to cut cost on "empty" rules
+	if(s < 1e-16 ) // maybe also try a dynamic threshold: 0.0001 * half_max 
+	{ return 0.0; } 
+
+	// operations to reduce a^b operations and minimize hidden memory allocation / deallocation / copy operations. 
+	// Hill = (s/half_max)^hill_power / ( 1 + (s/half_max)^hill_power  )
+	double temp = s; // s 
+	temp /= half_max; // s/half_max 
+	double temp1 = pow(temp,hill_power); // (s/half_max)^h 
+	temp = temp1;  // (s/half_max)^h 
+	temp +=1 ;  // (1+(s/half_max)^h ); 
+	temp1 /= temp; // (s/half_max)^h / ( 1 + s/half_max)^h) 
+	return temp1; 
+}
+
+double linear_response_function( double s, double s_min , double s_max )
+{
+	if( s <= s_min )
+	{ return 0.0; } 
+	if( s >= s_max )
+	{ return 1.0; } 
+	s -= s_min; // overwrite s with s - s_min 
+	s_max -= s_min; // overwrite s_max with s_max - s_min 
+	s /= s_max; // now we have (s-s_min)/(s_max-s_min
+	return s; 
+}
+
+double decreasing_linear_response_function( double s, double s_min , double s_max )
+{
+	if( s <= s_min )
+	{ return 1.0; } 
+	if( s >= s_max )
+	{ return 0.0; } 
+	// (smax-s)/(smax-smin); 
+	// = -(s-smax)/(smax-smin)
+	s -= s_max; // replace s by s-s_max 
+	s_max -= s_min; // replace s_max = s_max - s_min 
+	s /= s_max; // this is (s-s_max)/(s_max-s_min)
+	s *= -1; // this is (s_max-s)/(s_max-s_min)
+	return s; 
+}
+
+
+};
