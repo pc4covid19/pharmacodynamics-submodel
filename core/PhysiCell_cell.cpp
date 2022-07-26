@@ -1359,6 +1359,18 @@ void Cell::fuse_cell( Cell* pCell_to_fuse )
 		// set new position at center of volume 
 			// x_new = (vol_B * x_B + vol_S * x_S ) / (vol_B + vol_S )
 		
+		// mark it as dead 
+		pCell_to_fuse->phenotype.death.dead = true; 
+		// set secretion and uptake to zero 
+		pCell_to_fuse->phenotype.secretion.set_all_secretion_to_zero( );  
+		pCell_to_fuse->phenotype.secretion.set_all_uptake_to_zero( ); 
+		
+		// deactivate all custom function 
+		pCell_to_fuse->functions.custom_cell_rule = NULL; 
+		pCell_to_fuse->functions.update_phenotype = NULL; 
+		pCell_to_fuse->functions.contact_function = NULL; 
+		pCell_to_fuse->functions.volume_update_function = NULL; 
+
 		std::vector<double> new_position = position; // x_B
 		new_position *= phenotype.volume.total; // vol_B * x_B 
 		double total_volume = phenotype.volume.total; 
@@ -1455,17 +1467,6 @@ void Cell::fuse_cell( Cell* pCell_to_fuse )
 		
 		// flag it for removal 
 		// pCell_to_eat->flag_for_removal(); 
-		// mark it as dead 
-		pCell_to_fuse->phenotype.death.dead = true; 
-		// set secretion and uptake to zero 
-		pCell_to_fuse->phenotype.secretion.set_all_secretion_to_zero( );  
-		pCell_to_fuse->phenotype.secretion.set_all_uptake_to_zero( ); 
-		
-		// deactivate all custom function 
-		pCell_to_fuse->functions.custom_cell_rule = NULL; 
-		pCell_to_fuse->functions.update_phenotype = NULL; 
-		pCell_to_fuse->functions.contact_function = NULL; 
-		pCell_to_fuse->functions.volume_update_function = NULL; 
 
 		// remove all adhesions 
 		// pCell_to_eat->remove_all_attached_cells();
